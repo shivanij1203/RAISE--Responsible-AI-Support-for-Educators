@@ -10,7 +10,7 @@ from .views.templates import template_list, template_detail, document_generate
 from .views.assessment import assessment_questions, assessment_submit
 from .views.research import submit_consent, start_session, record_response, complete_session
 from .views.export import project_export
-from .views.verification import scan_file_for_pii, classify_data
+from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns
 
 urlpatterns = [
     # Auth endpoints
@@ -65,6 +65,8 @@ urlpatterns = [
     # Verification endpoints (automated checkpoint checks)
     path('verify/scan-pii', scan_file_for_pii, name='scan-pii'),
     path('verify/classify-data', classify_data, name='classify-data'),
+    path('verify/bias-audit', bias_audit_view, name='bias-audit'),
+    path('verify/file-columns', get_file_columns, name='file-columns'),
 
     # Assessment endpoints
     path('assessment/questions', assessment_questions, name='assessment-questions'),

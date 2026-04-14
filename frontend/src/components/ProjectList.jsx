@@ -7,7 +7,7 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newProject, setNewProject] = useState({ name: '', description: '', aiUseCase: '', aiToolIds: [], facultyEmail: '', studentEmail: '' });
+  const [newProject, setNewProject] = useState({ name: '', description: '', aiUseCase: '', aiToolIds: [], facultyEmail: '', studentEmail: '', riskContext: {} });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [availableTools, setAvailableTools] = useState([]);
@@ -50,10 +50,11 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
         newProject.aiUseCase,
         newProject.aiToolIds,
         newProject.facultyEmail,
-        newProject.studentEmail
+        newProject.studentEmail,
+        newProject.riskContext
       );
       setProjects([project, ...projects]);
-      setNewProject({ name: '', description: '', aiUseCase: '', aiToolIds: [], facultyEmail: '', studentEmail: '' });
+      setNewProject({ name: '', description: '', aiUseCase: '', aiToolIds: [], facultyEmail: '', studentEmail: '', riskContext: {} });
       setShowCreateModal(false);
       onSelectProject(project);
     } catch (err) {
@@ -269,6 +270,57 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
               </select>
               <p className="form-hint">This determines which compliance checkpoints are relevant</p>
             </div>
+
+            {newProject.aiUseCase && (
+              <div className="risk-questions">
+                <div className="risk-questions-label">Quick risk assessment</div>
+                <p className="risk-questions-hint">These questions determine how many compliance steps are needed. Fewer risks = fewer steps.</p>
+                <label className="risk-question">
+                  <input
+                    type="checkbox"
+                    checked={newProject.riskContext?.involves_student_data || false}
+                    onChange={(e) => setNewProject({ ...newProject, riskContext: { ...newProject.riskContext, involves_student_data: e.target.checked } })}
+                  />
+                  <div>
+                    <span className="rq-text">This involves student records or data</span>
+                    <span className="rq-hint">Names, IDs, grades, submissions, enrollment info</span>
+                  </div>
+                </label>
+                <label className="risk-question">
+                  <input
+                    type="checkbox"
+                    checked={newProject.riskContext?.data_leaves_institution || false}
+                    onChange={(e) => setNewProject({ ...newProject, riskContext: { ...newProject.riskContext, data_leaves_institution: e.target.checked } })}
+                  />
+                  <div>
+                    <span className="rq-text">Data is sent to an external service</span>
+                    <span className="rq-hint">Cloud tools like ChatGPT, Copilot, or any non-USF system</span>
+                  </div>
+                </label>
+                <label className="risk-question">
+                  <input
+                    type="checkbox"
+                    checked={newProject.riskContext?.affects_decisions || false}
+                    onChange={(e) => setNewProject({ ...newProject, riskContext: { ...newProject.riskContext, affects_decisions: e.target.checked } })}
+                  />
+                  <div>
+                    <span className="rq-text">This affects grades, admissions, or evaluations</span>
+                    <span className="rq-hint">Any outcome that directly impacts a person's academic record</span>
+                  </div>
+                </label>
+                <label className="risk-question">
+                  <input
+                    type="checkbox"
+                    checked={newProject.riskContext?.involves_human_subjects || false}
+                    onChange={(e) => setNewProject({ ...newProject, riskContext: { ...newProject.riskContext, involves_human_subjects: e.target.checked } })}
+                  />
+                  <div>
+                    <span className="rq-text">This is part of a human subjects research study</span>
+                    <span className="rq-hint">Requires or may require IRB approval</span>
+                  </div>
+                </label>
+              </div>
+            )}
 
             {role === 'student' && (
               <div className="form-group">

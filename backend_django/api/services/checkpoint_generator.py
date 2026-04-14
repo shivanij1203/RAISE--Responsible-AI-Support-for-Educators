@@ -40,8 +40,17 @@ FRAMEWORK_MAP: dict[str, list[str]] = {
 
 # ============== Checkpoint Generation Logic ==============
 
-def generate_checkpoints_for_use_case(ai_use_case: str) -> list[dict[str, Any]]:
-    """Return the right set of checkpoints depending on what kind of AI use case it is."""
+def generate_checkpoints_for_use_case(ai_use_case: str, risk_context: dict | None = None) -> list[dict[str, Any]]:
+    """Return the right set of checkpoints depending on use case and risk context.
+
+    risk_context keys (all bool):
+        involves_student_data — Does this involve student records?
+        data_leaves_institution — Does data leave institutional systems?
+        affects_decisions — Does this affect grades, admissions, or evaluations?
+        involves_human_subjects — Does this involve human subjects research?
+    """
+    if risk_context is None:
+        risk_context = {}
 
     base: list[dict[str, Any]] = [
         {
@@ -292,7 +301,13 @@ def generate_checkpoints_for_use_case(ai_use_case: str) -> list[dict[str, Any]]:
         },
     ]
 
-    checkpoints = list(base)
+    involves_student_data = risk_context.get('involves_student_data', False)
+    data_leaves = risk_context.get('data_leaves_institution', False)
+    affects_decisions = risk_context.get('affects_decisions', False)
+    involves_human_subjects = risk_context.get('involves_human_subjects', False)
+
+    # Start with use-case-specific checkpoints
+    checkpoints: list[dict[str, Any]] = []
 
     if ai_use_case == 'data_analysis':
         checkpoints += data_checkpoints + model_checkpoints
@@ -310,6 +325,49 @@ def generate_checkpoints_for_use_case(ai_use_case: str) -> list[dict[str, Any]]:
         checkpoints += teaching_checkpoints
     elif ai_use_case == 'admin':
         checkpoints += admin_checkpoints
+
+    # Risk-based additions — add checkpoints based on context, not just use case
+    existing_ids = {cp['checkpoint_id'] for cp in checkpoints}
+
+    # If student data is involved, ensure FERPA + de-identification checkpoints
+    if involves_student_data:
+        for cp in data_checkpoints:
+            if cp['checkpoint_id'] not in existing_ids:
+                checkpoints.append(cp)
+                existing_ids.add(cp['checkpoint_id'])
+
+    # If data leaves institutional systems, ensure storage + de-identification
+    if data_leaves:
+        for cp in data_checkpoints:
+            if cp['checkpoint_id'] not in existing_ids:
+                checkpoints.append(cp)
+                existing_ids.add(cp['checkpoint_id'])
+
+    # If it affects grades/admissions/evaluations, ensure human review + bias audit
+    if affects_decisions:
+        decision_cps = [cp for cp in model_checkpoints if cp['checkpoint_id'] in ('bias_audit', 'human_review')]
+        for cp in decision_cps:
+            if cp['checkpoint_id'] not in existing_ids:
+                checkpoints.append(cp)
+                existing_ids.add(cp['checkpoint_id'])
+
+    # If human subjects research, ensure IRB + consent are in base
+    if involves_human_subjects:
+        for cp in qualitative_checkpoints:
+            if cp['checkpoint_id'] == 'participant_consent' and cp['checkpoint_id'] not in existing_ids:
+                checkpoints.append(cp)
+                existing_ids.add(cp['checkpoint_id'])
+
+    # Build base checkpoints — filter IRB out if not research and not human subjects
+    filtered_base = []
+    for cp in base:
+        if cp['checkpoint_id'] == 'irb' and not involves_human_subjects:
+            # Skip IRB for non-research activities (grading, teaching, admin)
+            if ai_use_case in ('grading', 'teaching', 'admin'):
+                continue
+        filtered_base.append(cp)
+
+    checkpoints = filtered_base + checkpoints
 
     # Faculty-only use cases: assign ALL checkpoints to PI
     faculty_only_cases = {'grading', 'teaching', 'admin'}

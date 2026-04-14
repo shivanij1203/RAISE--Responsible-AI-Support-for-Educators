@@ -53,6 +53,7 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
   const [editDescription, setEditDescription] = useState(project.description || '');
   const [editCollaboratorEmail, setEditCollaboratorEmail] = useState('');
   const [editError, setEditError] = useState('');
+  const [editRiskContext, setEditRiskContext] = useState(project.riskContext || {});
   const [availableTools, setAvailableTools] = useState([]);
 
   useEffect(() => {
@@ -938,13 +939,62 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
                 <p className="form-hint">Your faculty advisor will see this activity and complete checkpoints assigned to them</p>
               )}
             </div>
+            <div className="risk-questions">
+              <div className="risk-questions-label">Risk assessment</div>
+              <p className="risk-questions-hint">Updating these may add new compliance steps. Existing completed steps are never removed.</p>
+              <label className="risk-question">
+                <input
+                  type="checkbox"
+                  checked={editRiskContext.involves_student_data || false}
+                  onChange={(e) => setEditRiskContext({ ...editRiskContext, involves_student_data: e.target.checked })}
+                />
+                <div>
+                  <span className="rq-text">This involves student records or data</span>
+                  <span className="rq-hint">Names, IDs, grades, submissions, enrollment info</span>
+                </div>
+              </label>
+              <label className="risk-question">
+                <input
+                  type="checkbox"
+                  checked={editRiskContext.data_leaves_institution || false}
+                  onChange={(e) => setEditRiskContext({ ...editRiskContext, data_leaves_institution: e.target.checked })}
+                />
+                <div>
+                  <span className="rq-text">Data is sent to an external service</span>
+                  <span className="rq-hint">Cloud tools like ChatGPT, Copilot, or any non-institutional system</span>
+                </div>
+              </label>
+              <label className="risk-question">
+                <input
+                  type="checkbox"
+                  checked={editRiskContext.affects_decisions || false}
+                  onChange={(e) => setEditRiskContext({ ...editRiskContext, affects_decisions: e.target.checked })}
+                />
+                <div>
+                  <span className="rq-text">This affects grades, admissions, or evaluations</span>
+                  <span className="rq-hint">Any outcome that directly impacts a person's academic record</span>
+                </div>
+              </label>
+              <label className="risk-question">
+                <input
+                  type="checkbox"
+                  checked={editRiskContext.involves_human_subjects || false}
+                  onChange={(e) => setEditRiskContext({ ...editRiskContext, involves_human_subjects: e.target.checked })}
+                />
+                <div>
+                  <span className="rq-text">This is part of a human subjects research study</span>
+                  <span className="rq-hint">Requires or may require IRB approval</span>
+                </div>
+              </label>
+            </div>
+
             {editError && <p className="error-text">{editError}</p>}
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => { setShowEditModal(false); setEditError(''); }}>Cancel</button>
               <button className="btn-primary" onClick={async () => {
                 setEditError('');
                 try {
-                  const updateData = { name: editName.trim(), description: editDescription };
+                  const updateData = { name: editName.trim(), description: editDescription, risk_context: editRiskContext };
                   if (editCollaboratorEmail.trim()) {
                     const field = role === 'pi' ? 'student_collaborator_email' : 'faculty_advisor_email';
                     updateData[field] = editCollaboratorEmail.trim();

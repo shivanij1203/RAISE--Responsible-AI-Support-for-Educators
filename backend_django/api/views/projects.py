@@ -84,6 +84,18 @@ def serialize_project(project: Project) -> dict[str, Any]:
             {'id': t.id, 'name': t.name, 'status': t.status, 'category': t.category}
             for t in project.ai_tools.all()
         ],
+        'riskContext': _infer_risk_context(checkpoints),
+    }
+
+
+def _infer_risk_context(checkpoints: list[dict]) -> dict:
+    """Infer risk context from which checkpoints exist on the project."""
+    cp_ids = {cp['id'] for cp in checkpoints}
+    return {
+        'involves_student_data': bool(cp_ids & {'data_deidentified', 'data_storage', 'ferpa_compliance'}),
+        'data_leaves_institution': bool(cp_ids & {'data_storage', 'data_deidentified'}),
+        'affects_decisions': bool(cp_ids & {'bias_audit', 'human_review', 'grading_fairness', 'admin_bias_audit'}),
+        'involves_human_subjects': bool(cp_ids & {'irb', 'participant_consent'}),
     }
 
 
@@ -131,8 +143,9 @@ def project_list_create(request: Request) -> Response:
         student_collaborator=student_collab,
     )
 
-    # Generate checkpoints
-    checkpoint_defs = generate_checkpoints_for_use_case(ai_use_case)
+    # Generate checkpoints based on use case + risk context
+    risk_context = request.data.get('risk_context', {})
+    checkpoint_defs = generate_checkpoints_for_use_case(ai_use_case, risk_context)
     for cp_def in checkpoint_defs:
         Checkpoint.objects.create(project=project, **cp_def)
 
@@ -188,6 +201,22 @@ def project_detail(request: Request, project_id: int) -> Response:
                 return Response({"error": f"No account found for {student_email}"}, status=status.HTTP_400_BAD_REQUEST)
         elif student_email == '' and 'student_collaborator_email' in request.data:
             project.student_collaborator = None
+
+        # Handle risk context changes — backfill any missing checkpoints
+        risk_context = request.data.get('risk_context')
+        if risk_context and project.user == request.user:
+            expected = generate_checkpoints_for_use_case(project.ai_use_case, risk_context)
+            existing_ids = set(project.checkpoints.values_list('checkpoint_id', flat=True))
+            added = 0
+            for cp_def in expected:
+                if cp_def['checkpoint_id'] not in existing_ids:
+                    Checkpoint.objects.create(project=project, **cp_def)
+                    added += 1
+            # Also remove checkpoints that are no longer needed AND not yet completed
+            expected_ids = {cp['checkpoint_id'] for cp in expected}
+            for cp in project.checkpoints.filter(completed=False):
+                if cp.checkpoint_id not in expected_ids:
+                    cp.delete()
 
         project.save()
         return Response(serialize_project(project))

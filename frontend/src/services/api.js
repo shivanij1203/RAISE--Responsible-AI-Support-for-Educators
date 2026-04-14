@@ -32,7 +32,7 @@ export async function fetchProjects() {
   return res.data;
 }
 
-export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '') {
+export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '', riskContext = {}) {
   const res = await api.post('/projects', {
     name,
     description,
@@ -40,6 +40,7 @@ export async function createProject(name, description, aiUseCase, aiToolIds = []
     ai_tool_ids: aiToolIds,
     faculty_advisor_email: facultyAdvisorEmail,
     student_collaborator_email: studentCollaboratorEmail,
+    risk_context: riskContext,
   });
   return res.data;
 }
@@ -115,6 +116,27 @@ export async function scanFileForPII(file, scanType = 'pii') {
 
 export async function classifyData(description) {
   const res = await api.post('/verify/classify-data', { description });
+  return res.data;
+}
+
+export async function runBiasAudit(file, outcomeColumn, protectedColumn, positiveValue = '') {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('outcome_column', outcomeColumn);
+  formData.append('protected_column', protectedColumn);
+  if (positiveValue) formData.append('positive_value', positiveValue);
+  const res = await api.post('/verify/bias-audit', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function getFileColumns(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/verify/file-columns', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return res.data;
 }
 

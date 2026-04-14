@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from api.services.pii_scanner import scan_csv_for_pii, classify_data_from_description
+from api.services.bias_auditor import audit_bias, get_csv_columns
 
 
 @api_view(['POST'])
@@ -78,4 +79,59 @@ def classify_data(request: Request) -> Response:
         )
 
     result = classify_data_from_description(description)
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def bias_audit_view(request: Request) -> Response:
+    """Upload a CSV and run a bias/fairness audit on it."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not uploaded_file.name.lower().endswith('.csv'):
+        return Response({"error": "Only CSV files are supported"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return Response({"error": "File too large. Maximum size is 10MB."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        content = uploaded_file.read().decode('utf-8')
+    except UnicodeDecodeError:
+        return Response({"error": "Could not read file. Please ensure it is a valid UTF-8 CSV."}, status=status.HTTP_400_BAD_REQUEST)
+
+    outcome_column = request.data.get('outcome_column', '').strip()
+    protected_column = request.data.get('protected_column', '').strip()
+    positive_value = request.data.get('positive_value', '').strip()
+
+    # If columns not specified, return column list for the user to select
+    if not outcome_column or not protected_column:
+        result = get_csv_columns(content)
+        return Response(result)
+
+    result = audit_bias(content, outcome_column, protected_column, positive_value)
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def get_file_columns(request: Request) -> Response:
+    """Upload a CSV and get its column names for selection dropdowns."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        content = uploaded_file.read().decode('utf-8')
+    except UnicodeDecodeError:
+        return Response({"error": "Could not read file."}, status=status.HTTP_400_BAD_REQUEST)
+
+    result = get_csv_columns(content)
     return Response(result)
