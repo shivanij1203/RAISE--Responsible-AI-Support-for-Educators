@@ -326,45 +326,45 @@ def generate_checkpoints_for_use_case(ai_use_case: str, risk_context: dict | Non
     elif ai_use_case == 'admin':
         checkpoints += admin_checkpoints
 
-    # Risk-based additions — add checkpoints based on context, not just use case
     existing_ids = {cp['checkpoint_id'] for cp in checkpoints}
 
-    # If student data is involved, ensure FERPA + de-identification checkpoints
-    if involves_student_data:
+    # Map of what's already covered by use-case-specific checkpoints
+    # so we don't add generic duplicates
+    covered_concerns = set()
+    if 'grading_fairness' in existing_ids or 'admin_bias_audit' in existing_ids:
+        covered_concerns.add('bias_audit')  # already has a specific bias check
+    if 'human_override' in existing_ids:
+        covered_concerns.add('human_review')  # already has a specific oversight check
+    if 'ferpa_compliance' in existing_ids:
+        covered_concerns.add('data_storage')  # FERPA already covers storage concerns
+
+    # Risk-based additions — only add if not already covered
+    if involves_student_data or data_leaves:
         for cp in data_checkpoints:
-            if cp['checkpoint_id'] not in existing_ids:
+            if cp['checkpoint_id'] not in existing_ids and cp['checkpoint_id'] not in covered_concerns:
                 checkpoints.append(cp)
                 existing_ids.add(cp['checkpoint_id'])
 
-    # If data leaves institutional systems, ensure storage + de-identification
-    if data_leaves:
-        for cp in data_checkpoints:
-            if cp['checkpoint_id'] not in existing_ids:
-                checkpoints.append(cp)
-                existing_ids.add(cp['checkpoint_id'])
-
-    # If it affects grades/admissions/evaluations, ensure human review + bias audit
     if affects_decisions:
-        decision_cps = [cp for cp in model_checkpoints if cp['checkpoint_id'] in ('bias_audit', 'human_review')]
-        for cp in decision_cps:
-            if cp['checkpoint_id'] not in existing_ids:
+        for cp in model_checkpoints:
+            if cp['checkpoint_id'] not in existing_ids and cp['checkpoint_id'] not in covered_concerns:
                 checkpoints.append(cp)
                 existing_ids.add(cp['checkpoint_id'])
 
-    # If human subjects research, ensure IRB + consent are in base
     if involves_human_subjects:
         for cp in qualitative_checkpoints:
             if cp['checkpoint_id'] == 'participant_consent' and cp['checkpoint_id'] not in existing_ids:
                 checkpoints.append(cp)
                 existing_ids.add(cp['checkpoint_id'])
 
-    # Build base checkpoints — filter IRB out if not research and not human subjects
+    # Build base — skip IRB and data_classification for non-research use cases
+    non_research = {'grading', 'teaching', 'admin'}
     filtered_base = []
     for cp in base:
-        if cp['checkpoint_id'] == 'irb' and not involves_human_subjects:
-            # Skip IRB for non-research activities (grading, teaching, admin)
-            if ai_use_case in ('grading', 'teaching', 'admin'):
-                continue
+        if cp['checkpoint_id'] == 'irb' and ai_use_case in non_research and not involves_human_subjects:
+            continue
+        if cp['checkpoint_id'] == 'data_classification' and ai_use_case in non_research:
+            continue
         filtered_base.append(cp)
 
     checkpoints = filtered_base + checkpoints
