@@ -6053,3 +6053,44 @@ footer {
   color: #94a3b8;
   margin-top: 1px;
 }
+
+/* ===== Disclosure Button + Modal ===== */
+.pd-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.pd-disclosure-btn {
+  background: none;
+  border: 1px solid #006747;
+  color: #006747;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pd-disclosure-btn:hover {
+  background: #006747;
+  color: #fff;
+}
+
+.disclosure-textarea {
+  width: 100%;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.modal-wide {
+  max-width: 640px;
+}
