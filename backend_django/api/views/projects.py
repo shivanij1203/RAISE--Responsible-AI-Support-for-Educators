@@ -1,5 +1,3 @@
-from typing import Any
-
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,7 +7,12 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Q
 
-from api.models import Project, Checkpoint, Decision, AITool, UserProfile
+from api.models import Project, Checkpoint, Decision, AITool
+from api.serializers import (
+    ProjectSerializer,
+    CheckpointToggleResponseSerializer,
+    DecisionCreateResponseSerializer,
+)
 from api.services.checkpoint_generator import generate_checkpoints_for_use_case
 
 
@@ -25,78 +28,9 @@ def user_can_access_project(user, project):
     return project.user == user or project.faculty_advisor == user or project.student_collaborator == user
 
 
-def serialize_project(project: Project) -> dict[str, Any]:
-    """Serialize a project with its checkpoints and decisions.
-
-    Uses manual dict serialization to match the camelCase format
-    the frontend expects. A proper DRF serializer migration is planned
-    as a follow-up step.
-    """
-    checkpoints: list[dict[str, Any]] = []
-    for cp in project.checkpoints.all().order_by('id'):
-        checkpoints.append({
-            'id': cp.checkpoint_id,
-            'dbId': cp.id,
-            'label': cp.label,
-            'category': cp.category,
-            'assignedTo': cp.assigned_to,
-            'completed': cp.completed,
-            'completedAt': cp.completed_at.isoformat() if cp.completed_at else None,
-            'what': cp.what,
-            'why': cp.why,
-            'how': cp.how,
-            'frameworks': cp.frameworks or [],
-        })
-
-    decisions: list[dict[str, Any]] = []
-    for d in project.decisions.select_related('tool_used').order_by('-logged_at'):
-        decisions.append({
-            'id': str(d.id),
-            'checkpoint': d.checkpoint.checkpoint_id,
-            'description': d.description,
-            'notes': d.notes,
-            'proofType': d.proof_type or None,
-            'proofValue': d.proof_value or None,
-            'toolUsed': {'id': d.tool_used.id, 'name': d.tool_used.name} if d.tool_used else None,
-            'loggedAt': d.logged_at.isoformat(),
-        })
-
-    return {
-        'id': str(project.id),
-        'name': project.name,
-        'description': project.description,
-        'aiUseCase': project.ai_use_case,
-        'status': project.status,
-        'createdAt': project.created_at.isoformat(),
-        'owner': project.user.first_name or project.user.email,
-        'ownerEmail': project.user.email,
-        'facultyAdvisor': {
-            'name': project.faculty_advisor.first_name or project.faculty_advisor.email,
-            'email': project.faculty_advisor.email,
-        } if project.faculty_advisor else None,
-        'studentCollaborator': {
-            'name': project.student_collaborator.first_name or project.student_collaborator.email,
-            'email': project.student_collaborator.email,
-        } if project.student_collaborator else None,
-        'checkpoints': checkpoints,
-        'decisions': decisions,
-        'aiTools': [
-            {'id': t.id, 'name': t.name, 'status': t.status, 'category': t.category}
-            for t in project.ai_tools.all()
-        ],
-        'riskContext': _infer_risk_context(checkpoints),
-    }
-
-
-def _infer_risk_context(checkpoints: list[dict]) -> dict:
-    """Infer risk context from which checkpoints exist on the project."""
-    cp_ids = {cp['id'] for cp in checkpoints}
-    return {
-        'involves_student_data': bool(cp_ids & {'data_deidentified', 'data_storage', 'ferpa_compliance'}),
-        'data_leaves_institution': bool(cp_ids & {'data_storage', 'data_deidentified'}),
-        'affects_decisions': bool(cp_ids & {'bias_audit', 'human_review', 'grading_fairness', 'admin_bias_audit'}),
-        'involves_human_subjects': bool(cp_ids & {'irb', 'participant_consent'}),
-    }
+def serialize_project(project: Project) -> dict:
+    """Serialize a project in the camelCase format the frontend expects."""
+    return ProjectSerializer(project).data
 
 
 @api_view(['GET', 'POST'])
@@ -247,11 +181,7 @@ def checkpoint_toggle(request: Request, project_id: int, checkpoint_id: str) -> 
     checkpoint.completed_at = timezone.now() if checkpoint.completed else None
     checkpoint.save()
 
-    return Response({
-        "id": checkpoint.checkpoint_id,
-        "completed": checkpoint.completed,
-        "completedAt": checkpoint.completed_at.isoformat() if checkpoint.completed_at else None,
-    })
+    return Response(CheckpointToggleResponseSerializer(checkpoint).data)
 
 
 @api_view(['POST'])
@@ -286,7 +216,6 @@ def decision_create(request: Request, project_id: int) -> Response:
     tool_used = None
     tool_used_id = request.data.get('toolUsedId')
     if tool_used_id:
-        from api.models import AITool
         try:
             tool_used = AITool.objects.get(id=tool_used_id)
         except AITool.DoesNotExist:
@@ -307,16 +236,9 @@ def decision_create(request: Request, project_id: int) -> Response:
         checkpoint.completed = True
         checkpoint.completed_at = timezone.now()
         checkpoint.save()
+        decision.refresh_from_db(fields=['checkpoint'])
 
-    return Response({
-        'id': str(decision.id),
-        'checkpoint': checkpoint.checkpoint_id,
-        'description': decision.description,
-        'notes': decision.notes,
-        'proofType': decision.proof_type or None,
-        'proofValue': decision.proof_value or None,
-        'toolUsed': {'id': tool_used.id, 'name': tool_used.name} if tool_used else None,
-        'loggedAt': decision.logged_at.isoformat(),
-        'checkpointCompleted': checkpoint.completed,
-        'checkpointCompletedAt': checkpoint.completed_at.isoformat() if checkpoint.completed_at else None,
-    }, status=status.HTTP_201_CREATED)
+    return Response(
+        DecisionCreateResponseSerializer(decision).data,
+        status=status.HTTP_201_CREATED,
+    )

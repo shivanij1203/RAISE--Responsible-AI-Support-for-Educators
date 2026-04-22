@@ -1,43 +1,15 @@
-from typing import Any
-
 from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 
 from api.models import AITool, UserProfile, Project
+from api.serializers import AIToolSerializer
 
 
-def serialize_ai_tool(tool: AITool, include_guidance: bool = False) -> dict[str, Any]:
+def serialize_ai_tool(tool: AITool, include_guidance: bool = False) -> dict:
     """Serialize an AITool instance to a camelCase dict for the frontend."""
-    result = {
-        'id': tool.id,
-        'toolType': tool.tool_type,
-        'toolTypeDisplay': tool.get_tool_type_display(),
-        'name': tool.name,
-        'description': tool.description,
-        'vendor': tool.vendor,
-        'category': tool.category,
-        'categoryDisplay': tool.get_category_display(),
-        'status': tool.status,
-        'statusDisplay': tool.get_status_display(),
-        'riskNotes': tool.risk_notes,
-        'websiteUrl': tool.website_url,
-        'addedBy': tool.added_by.first_name or tool.added_by.email if tool.added_by else None,
-        'createdAt': tool.created_at.isoformat(),
-        'projectCount': tool.projects.count(),
-        # Data handling
-        'retainsData': tool.retains_data,
-        'dataRetentionDetails': tool.data_retention_details,
-        'sendsToThirdParty': tool.sends_to_third_party,
-        'hipaaCompliant': tool.hipaa_compliant,
-        'ferpaCompliant': tool.ferpa_compliant,
-        'hasEnterprisePlan': tool.has_enterprise_plan,
-        'recommendedUseCases': tool.recommended_use_cases or [],
-    }
-    if include_guidance:
-        result['complianceGuidance'] = tool.compliance_guidance or {}
-    return result
+    return AIToolSerializer(tool, context={'include_guidance': include_guidance}).data
 
 
 @api_view(['GET', 'POST'])

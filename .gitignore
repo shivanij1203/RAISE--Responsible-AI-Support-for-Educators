@@ -14,6 +14,11 @@ local_settings.py
 db.sqlite3
 media/
 
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+
 # Node
 node_modules/
 dist/
