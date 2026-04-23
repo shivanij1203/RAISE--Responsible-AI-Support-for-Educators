@@ -4949,6 +4949,152 @@ footer {
   background: #f8fafc;
 }
 
+/* Notification Bell */
+.nb-wrapper {
+  position: relative;
+  margin-right: 0.75rem;
+}
+
+.nb-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.nb-trigger:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.nb-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #cc0033;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #006747;
+}
+
+.nb-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  width: 340px;
+  max-height: 420px;
+  z-index: 100;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.nb-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.nb-markall {
+  background: none;
+  border: none;
+  color: #006747;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nb-markall:hover {
+  text-decoration: underline;
+}
+
+.nb-list {
+  overflow-y: auto;
+  max-height: 360px;
+}
+
+.nb-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+}
+
+.nb-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.nb-item:last-child {
+  border-bottom: none;
+}
+
+.nb-item:hover {
+  background: #f8fafc;
+}
+
+.nb-item-unread {
+  background: #f0f9f4;
+}
+
+.nb-item-unread:hover {
+  background: #e6f3ec;
+}
+
+.nb-message {
+  font-size: 0.8125rem;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.nb-item-unread .nb-message {
+  font-weight: 500;
+}
+
+.nb-time {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
 /* Tab Navigation */
 .pl-nav {
   background: #fff;

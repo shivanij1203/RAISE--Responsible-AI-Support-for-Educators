@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchDashboardStats } from '../services/api';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 
 const USE_CASE_LABELS = {
   'data_analysis': 'Data Analysis',
@@ -65,6 +66,7 @@ function InstitutionalDashboard({ user, role, onLogout, onBack, onViewToolRegist
               </div>
             </div>
             <div className="pl-topbar-right">
+              <NotificationBell />
               <UserMenu user={user} role={role} onLogout={onLogout} />
             </div>
           </div>

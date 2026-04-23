@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchTools, createTool, updateTool, fetchToolDetail } from '../services/api';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 
 const AI_CATEGORIES = [
   { value: 'chatbot', label: 'Chatbot' },
@@ -168,6 +169,7 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
             </div>
           </div>
           <div className="pl-topbar-right">
+            <NotificationBell />
             <UserMenu user={user} role={role} onLogout={onLogout} />
           </div>
         </div>

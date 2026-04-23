@@ -3,6 +3,7 @@ from .research import ResearchConsent, AssessmentSession, AssessmentResponse
 from .project import Project, Checkpoint, Decision
 from .tools import AITool
 from .comments import CheckpointComment
+from .notification import Notification
 
 __all__ = [
     'UserProfile',
@@ -14,4 +15,5 @@ __all__ = [
     'Decision',
     'AITool',
     'CheckpointComment',
+    'Notification',
 ]

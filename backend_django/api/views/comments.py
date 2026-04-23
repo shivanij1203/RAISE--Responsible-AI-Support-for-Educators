@@ -5,6 +5,7 @@ from rest_framework import status
 
 from api.models import Project, Checkpoint, CheckpointComment
 from api.serializers import CheckpointCommentSerializer
+from api.services import notification_service
 
 
 @api_view(['GET', 'POST'])
@@ -37,6 +38,7 @@ def checkpoint_comments(request: Request, project_id: int, checkpoint_id: str) -
         user=request.user,
         text=text,
     )
+    notification_service.notify_comment_added(comment)
     return Response(
         CheckpointCommentSerializer(comment).data,
         status=status.HTTP_201_CREATED,

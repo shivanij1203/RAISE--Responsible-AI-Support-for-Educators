@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchProjects, createProject, fetchTools, updateProject } from '../services/api';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 
 function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, onViewToolRegistry }) {
   const [projects, setProjects] = useState([]);
@@ -134,6 +135,10 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
             </div>
           </div>
           <div className="pl-topbar-right">
+            <NotificationBell onOpenProject={(id) => {
+              const p = projects.find((x) => x.id === id);
+              if (p) onSelectProject(p);
+            }} />
             <UserMenu user={user} role={role} onLogout={onLogout} />
           </div>
         </div>

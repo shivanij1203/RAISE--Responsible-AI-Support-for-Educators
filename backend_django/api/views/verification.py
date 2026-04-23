@@ -9,8 +9,30 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 
+from api.models import Project, Checkpoint
+from api.services import notification_service
 from api.services.pii_scanner import scan_csv_for_pii, classify_data_from_description
 from api.services.bias_auditor import audit_bias, get_csv_columns
+
+
+def _maybe_notify_verification(
+    request,
+    scan_type: str,
+    verdict: str,
+) -> None:
+    """If the request includes project_id + checkpoint_id, fire a notification."""
+    project_id = request.data.get('project_id')
+    checkpoint_id = request.data.get('checkpoint_id')
+    if not project_id or not checkpoint_id:
+        return
+    try:
+        project = Project.objects.get(id=project_id)
+        checkpoint = Checkpoint.objects.get(project=project, checkpoint_id=checkpoint_id)
+    except (Project.DoesNotExist, Checkpoint.DoesNotExist, ValueError):
+        return
+    notification_service.notify_verification_run(
+        checkpoint, actor=request.user, scan_type=scan_type, verdict=verdict,
+    )
 
 
 @api_view(['POST'])
@@ -62,6 +84,9 @@ def scan_file_for_pii(request: Request) -> Response:
                 if ferpa_findings else 'No student education record patterns detected',
         }
 
+    verdict = 'issues found' if result.get('findings') else 'clean'
+    _maybe_notify_verification(request, scan_type, verdict)
+
     return Response(result)
 
 
@@ -79,6 +104,8 @@ def classify_data(request: Request) -> Response:
         )
 
     result = classify_data_from_description(description)
+    verdict = str(result.get('classification', 'unknown'))
+    _maybe_notify_verification(request, 'classification', verdict)
     return Response(result)
 
 
@@ -114,6 +141,8 @@ def bias_audit_view(request: Request) -> Response:
         return Response(result)
 
     result = audit_bias(content, outcome_column, protected_column, positive_value)
+    verdict = str(result.get('verdict', 'completed'))
+    _maybe_notify_verification(request, 'bias', verdict)
     return Response(result)
 
 

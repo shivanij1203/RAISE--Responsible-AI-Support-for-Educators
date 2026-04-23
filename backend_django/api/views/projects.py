@@ -13,6 +13,7 @@ from api.serializers import (
     CheckpointToggleResponseSerializer,
     DecisionCreateResponseSerializer,
 )
+from api.services import notification_service
 from api.services.checkpoint_generator import generate_checkpoints_for_use_case
 
 
@@ -181,6 +182,9 @@ def checkpoint_toggle(request: Request, project_id: int, checkpoint_id: str) -> 
     checkpoint.completed_at = timezone.now() if checkpoint.completed else None
     checkpoint.save()
 
+    if checkpoint.completed:
+        notification_service.notify_checkpoint_completed(checkpoint, actor=request.user)
+
     return Response(CheckpointToggleResponseSerializer(checkpoint).data)
 
 
@@ -237,6 +241,7 @@ def decision_create(request: Request, project_id: int) -> Response:
         checkpoint.completed_at = timezone.now()
         checkpoint.save()
         decision.refresh_from_db(fields=['checkpoint'])
+        notification_service.notify_checkpoint_completed(checkpoint, actor=request.user)
 
     return Response(
         DecisionCreateResponseSerializer(decision).data,

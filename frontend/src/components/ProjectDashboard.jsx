@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toggleCheckpoint, logDecision, fetchTools } from '../services/api';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 import LogDecisionModal from './modals/LogDecisionModal';
 import VerificationScanModal from './modals/VerificationScanModal';
 import DisclosureModal from './modals/DisclosureModal';
@@ -120,6 +121,7 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
             </div>
           </div>
           <div className="pl-topbar-right">
+            <NotificationBell />
             <UserMenu user={user} role={role} onLogout={onLogout} />
           </div>
         </div>

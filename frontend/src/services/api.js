@@ -244,3 +244,19 @@ export async function generateDocument(templateKey, fieldValues) {
   return res.data;
 }
 
+// Notifications
+export async function fetchNotifications() {
+  const res = await api.get('/notifications');
+  return res.data;
+}
+
+export async function markNotificationRead(notificationId) {
+  const res = await api.post(`/notifications/${notificationId}/read`);
+  return res.data;
+}
+
+export async function markAllNotificationsRead() {
+  const res = await api.post('/notifications/read-all');
+  return res.data;
+}
+

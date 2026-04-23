@@ -11,6 +11,7 @@ from .views.assessment import assessment_questions, assessment_submit
 from .views.research import submit_consent, start_session, record_response, complete_session
 from .views.export import project_export
 from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns
+from .views.notifications import notification_list, notification_mark_read, notification_mark_all_read
 
 urlpatterns = [
     # Auth endpoints
@@ -71,4 +72,9 @@ urlpatterns = [
     # Assessment endpoints
     path('assessment/questions', assessment_questions, name='assessment-questions'),
     path('assessment/submit', assessment_submit, name='assessment-submit'),
+
+    # Notification endpoints
+    path('notifications', notification_list, name='notification-list'),
+    path('notifications/read-all', notification_mark_all_read, name='notification-mark-all-read'),
+    path('notifications/<int:notification_id>/read', notification_mark_read, name='notification-mark-read'),
 ]
