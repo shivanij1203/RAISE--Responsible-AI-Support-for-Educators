@@ -180,15 +180,20 @@ CACHES = {
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
 
 # When DEBUG=False (prod), enable HTTPS-only cookies, HSTS, and SSL redirect.
 # Render terminates TLS at the edge and forwards X-Forwarded-Proto.
+# SameSite=None is required so the browser sends the session cookie on
+# cross-site XHR from the Vercel frontend; Secure=True is mandatory for None.
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'None'
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30  # 30 days
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+else:
+    SESSION_COOKIE_SAMESITE = 'Lax'
