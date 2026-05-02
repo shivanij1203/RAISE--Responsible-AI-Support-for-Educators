@@ -1,11 +1,20 @@
 import { useState } from 'react';
-import { scanFileForPII, classifyData } from '../../services/api';
+import { scanFileForPII, classifyData, runBiasAudit, getFileColumns } from '../../services/api';
+
+const BIAS_CHECKPOINTS = ['bias_audit', 'admin_bias_audit'];
 
 function VerificationScanModal({ checkpointId, onClose }) {
   const [scanResult, setScanResult] = useState(null);
   const [classifyResult, setClassifyResult] = useState(null);
   const [classifyText, setClassifyText] = useState('');
   const [scanning, setScanning] = useState(false);
+
+  const [biasFile, setBiasFile] = useState(null);
+  const [biasColumns, setBiasColumns] = useState([]);
+  const [outcomeColumn, setOutcomeColumn] = useState('');
+  const [protectedColumn, setProtectedColumn] = useState('');
+  const [positiveValue, setPositiveValue] = useState('');
+  const [biasResult, setBiasResult] = useState(null);
 
   async function handleFileScan(file) {
     setScanning(true);
@@ -33,6 +42,147 @@ function VerificationScanModal({ checkpointId, onClose }) {
     } finally {
       setScanning(false);
     }
+  }
+
+  async function handleBiasFile(file) {
+    setBiasFile(file);
+    setBiasResult(null);
+    setBiasColumns([]);
+    setOutcomeColumn('');
+    setProtectedColumn('');
+    setPositiveValue('');
+    try {
+      const result = await getFileColumns(file);
+      if (result.columns && result.columns.length > 0) {
+        setBiasColumns(result.columns);
+      } else {
+        setBiasResult({ error: result.error || 'Could not read columns from file.' });
+      }
+    } catch {
+      setBiasResult({ error: 'Could not read columns from file.' });
+    }
+  }
+
+  async function handleRunBiasAudit() {
+    if (!biasFile || !outcomeColumn || !protectedColumn) return;
+    setScanning(true);
+    setBiasResult(null);
+    try {
+      const result = await runBiasAudit(biasFile, outcomeColumn, protectedColumn, positiveValue);
+      setBiasResult(result);
+    } catch {
+      setBiasResult({ error: 'Audit failed. Please try again.' });
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  if (BIAS_CHECKPOINTS.includes(checkpointId)) {
+    const hasVerdict = biasResult && biasResult.verdict;
+    const verdictClass = biasResult?.verdict === 'PASS' ? 'scan-pass' : 'scan-fail';
+    const canRun = biasColumns.length > 0 && !hasVerdict;
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
+          <h2>Bias Audit</h2>
+          <p className="modal-subtitle">
+            Upload a CSV of decisions to check for disparate impact across protected groups.
+            Uses the 4/5ths rule and statistical parity difference.
+          </p>
+          <div className="form-group">
+            <label>Upload CSV file (max 10MB)</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) handleBiasFile(file);
+              }}
+            />
+          </div>
+          {canRun && (
+            <>
+              <div className="form-group">
+                <label>Outcome column (the decision being audited)</label>
+                <select value={outcomeColumn} onChange={(e) => setOutcomeColumn(e.target.value)}>
+                  <option value="">Select column...</option>
+                  {biasColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Protected column (group attribute, e.g. race, gender)</label>
+                <select value={protectedColumn} onChange={(e) => setProtectedColumn(e.target.value)}>
+                  <option value="">Select column...</option>
+                  {biasColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Positive outcome value (optional, auto-detected if blank)</label>
+                <input
+                  type="text"
+                  value={positiveValue}
+                  onChange={(e) => setPositiveValue(e.target.value)}
+                  placeholder="e.g., advance, hired, approved"
+                />
+              </div>
+            </>
+          )}
+          {scanning && <div className="scan-loading">Running bias audit...</div>}
+          {hasVerdict && (
+            <div className={`scan-result ${verdictClass}`}>
+              <div className="scan-verdict-label">Verdict: {biasResult.verdict}</div>
+              <p className="scan-verdict-text">{biasResult.verdictMessage}</p>
+              <div className="scan-stats">
+                <span>{biasResult.totalRecords} records</span>
+                <span>{biasResult.uniqueGroups} groups</span>
+                <span>Positive outcome: {biasResult.positiveOutcome}</span>
+              </div>
+              <div className="scan-findings">
+                <div className="scan-findings-label">Outcome rate by group:</div>
+                {biasResult.groupStats.map(g => (
+                  <div key={g.group} className="scan-finding">
+                    <span className="finding-type">{g.group}</span>
+                    <span className="finding-msg">
+                      {g.positive} of {g.total} positive ({g.rate}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="scan-findings">
+                <div className="scan-findings-label">Fairness metrics:</div>
+                <div className={`scan-finding ${biasResult.metrics.disparateImpact.pass ? 'low' : 'high'}`}>
+                  <span className="finding-type">Disparate impact ratio</span>
+                  <span className="finding-msg">
+                    {biasResult.metrics.disparateImpact.value} (threshold {biasResult.metrics.disparateImpact.threshold} or higher): {biasResult.metrics.disparateImpact.pass ? 'PASS' : 'FAIL'}
+                  </span>
+                </div>
+                <div className={`scan-finding ${biasResult.metrics.statisticalParity.pass ? 'low' : 'high'}`}>
+                  <span className="finding-type">Statistical parity difference</span>
+                  <span className="finding-msg">
+                    {biasResult.metrics.statisticalParity.value} (threshold {biasResult.metrics.statisticalParity.threshold} or lower): {biasResult.metrics.statisticalParity.pass ? 'PASS' : 'FAIL'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+          {biasResult?.error && (
+            <div className="scan-result scan-fail"><p>{biasResult.error}</p></div>
+          )}
+          <div className="modal-actions">
+            <button className="btn-secondary" onClick={onClose}>Close</button>
+            {canRun && (
+              <button
+                className="btn-primary"
+                onClick={handleRunBiasAudit}
+                disabled={!outcomeColumn || !protectedColumn || scanning}
+              >
+                {scanning ? 'Auditing...' : 'Run Audit'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (checkpointId === 'data_classification') {

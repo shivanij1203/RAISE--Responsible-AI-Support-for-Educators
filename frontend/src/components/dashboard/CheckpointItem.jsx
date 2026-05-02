@@ -1,6 +1,12 @@
 import CheckpointComments from '../CheckpointComments';
 
-const SCANNABLE_CHECKPOINTS = ['data_deidentified', 'ferpa_compliance', 'data_classification'];
+const SCANNABLE_CHECKPOINTS = [
+  'data_deidentified',
+  'ferpa_compliance',
+  'data_classification',
+  'bias_audit',
+  'admin_bias_audit',
+];
 
 function frameworkClass(fw) {
   return `framework-badge fw-${fw.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
