@@ -4,7 +4,7 @@ import { loginUser, registerUser } from '../services/api';
 function Login({ onLogin, onBack, prefillDemo = false }) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState(prefillDemo ? 'demo.faculty@usf.edu' : '');
-  const [password, setPassword] = useState(prefillDemo ? 'DemoPass1234!' : '');
+  const [password, setPassword] = useState(prefillDemo ? 'TestPass123' : '');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('faculty');
   const [error, setError] = useState('');
