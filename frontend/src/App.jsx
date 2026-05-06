@@ -18,6 +18,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [loginPrefill, setLoginPrefill] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('raise_user');
@@ -61,11 +62,11 @@ function App() {
   }
 
   if (currentView === 'landing') {
-    return <Landing onGetStarted={() => setCurrentView('login')} />;
+    return <Landing onGetStarted={(opts) => { setLoginPrefill(!!opts?.prefill); setCurrentView('login'); }} />;
   }
 
   if (currentView === 'login') {
-    return <Login onLogin={handleLogin} onBack={() => setCurrentView('landing')} />;
+    return <Login onLogin={handleLogin} onBack={() => setCurrentView('landing')} prefillDemo={loginPrefill} />;
   }
 
   if (currentView === 'dashboard') {

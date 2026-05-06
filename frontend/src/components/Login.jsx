@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { loginUser, registerUser } from '../services/api';
 
-function Login({ onLogin, onBack }) {
+function Login({ onLogin, onBack, prefillDemo = false }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(prefillDemo ? 'demo.faculty@usf.edu' : '');
+  const [password, setPassword] = useState(prefillDemo ? 'DemoPass1234!' : '');
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('faculty');
   const [error, setError] = useState('');

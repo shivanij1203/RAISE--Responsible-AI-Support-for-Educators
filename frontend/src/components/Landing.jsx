@@ -28,7 +28,8 @@ function Landing({ onGetStarted }) {
           A compliance guidance platform for faculty and students using technology in research, teaching, and administration at the University of South Florida.
         </p>
         <div className="lp-hero-actions">
-          <button className="lp-btn-hero" onClick={onGetStarted}>Sign In to Get Started</button>
+          <button className="lp-btn-hero" onClick={() => onGetStarted()}>Sign In to Get Started</button>
+          <button className="lp-btn-hero lp-btn-hero-secondary" onClick={() => onGetStarted({ prefill: true })}>Try Demo (TiE Judges)</button>
         </div>
         <p className="lp-hero-note">Requires a USF email address (@usf.edu) to register.</p>
         </div>
