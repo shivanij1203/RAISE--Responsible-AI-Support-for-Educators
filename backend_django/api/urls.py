@@ -1,8 +1,8 @@
 from django.urls import path
 
 from .views.auth import register, login_view, logout_view, me
-from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create
-from .views.tools import ai_tool_list_create, ai_tool_update, ai_tool_detail
+from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create, quick_add_parse, grading_prompt_view, smart_defaults_view
+from .views.tools import ai_tool_list_create, ai_tool_update, ai_tool_detail, tool_insights
 from .views.dashboard import dashboard_stats
 from .views.comments import checkpoint_comments
 from .views.ethics import ethics_start, ethics_node, ethics_evaluate, ethics_scenarios
@@ -10,7 +10,7 @@ from .views.templates import template_list, template_detail, document_generate
 from .views.assessment import assessment_questions, assessment_submit
 from .views.research import submit_consent, start_session, record_response, complete_session
 from .views.export import project_export
-from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns
+from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns, redact_pii_in_file, extract_pdf_text, blind_grade_csv
 from .views.notifications import notification_list, notification_mark_read, notification_mark_all_read
 
 urlpatterns = [
@@ -22,6 +22,9 @@ urlpatterns = [
 
     # Project endpoints
     path('projects', project_list_create, name='project-list-create'),
+    path('projects/quick-add/parse', quick_add_parse, name='project-quick-add-parse'),
+    path('projects/<int:project_id>/grading-prompt', grading_prompt_view, name='project-grading-prompt'),
+    path('projects/<int:project_id>/smart-defaults', smart_defaults_view, name='project-smart-defaults'),
     path('projects/<int:project_id>', project_detail, name='project-detail'),
     path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>', checkpoint_toggle, name='checkpoint-toggle'),
     path('projects/<int:project_id>/decisions', decision_create, name='decision-create'),
@@ -34,6 +37,7 @@ urlpatterns = [
     path('tools', ai_tool_list_create, name='tool-list-create'),
     path('tools/<int:tool_id>', ai_tool_update, name='tool-update'),
     path('tools/<int:tool_id>/detail', ai_tool_detail, name='tool-detail'),
+    path('tools/insights', tool_insights, name='tool-insights'),
 
     # Checkpoint Comment endpoints
     path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>/comments',
@@ -68,6 +72,9 @@ urlpatterns = [
     path('verify/classify-data', classify_data, name='classify-data'),
     path('verify/bias-audit', bias_audit_view, name='bias-audit'),
     path('verify/file-columns', get_file_columns, name='file-columns'),
+    path('verify/redact-pii', redact_pii_in_file, name='redact-pii'),
+    path('verify/extract-pdf', extract_pdf_text, name='extract-pdf'),
+    path('verify/blind-grade-csv', blind_grade_csv, name='blind-grade-csv'),
 
     # Assessment endpoints
     path('assessment/questions', assessment_questions, name='assessment-questions'),

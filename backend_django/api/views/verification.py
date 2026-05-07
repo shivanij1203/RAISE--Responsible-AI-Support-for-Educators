@@ -12,6 +12,8 @@ from rest_framework import status
 from api.models import Project, Checkpoint
 from api.services import notification_service
 from api.services.pii_scanner import scan_csv_for_pii, classify_data_from_description
+from api.services.pii_redactor import redact_csv, pseudonymize_csv
+from api.services.pdf_text_extractor import extract_text_from_pdf
 from api.services.bias_auditor import audit_bias, get_csv_columns
 
 
@@ -163,4 +165,104 @@ def get_file_columns(request: Request) -> Response:
         return Response({"error": "Could not read file."}, status=status.HTTP_400_BAD_REQUEST)
 
     result = get_csv_columns(content)
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def redact_pii_in_file(request: Request) -> Response:
+    """Upload a CSV and return a redacted copy with identity-revealing fields masked."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    filename = uploaded_file.name.lower()
+    if not filename.endswith('.csv'):
+        return Response(
+            {"error": "Only CSV files are supported for redaction"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return Response(
+            {"error": "File too large. Maximum size is 10MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        content = uploaded_file.read().decode('utf-8')
+    except UnicodeDecodeError:
+        return Response(
+            {"error": "Could not read file. Please ensure it is a valid UTF-8 CSV."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    result = redact_csv(content)
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def blind_grade_csv(request: Request) -> Response:
+    """Upload a CSV and return both anonymous and name-key CSVs for blind grading."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    filename = uploaded_file.name.lower()
+    if not filename.endswith('.csv'):
+        return Response(
+            {"error": "Only CSV files are supported for blind grading"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return Response(
+            {"error": "File too large. Maximum size is 10MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        content = uploaded_file.read().decode('utf-8')
+    except UnicodeDecodeError:
+        return Response(
+            {"error": "Could not read file. Please ensure it is a valid UTF-8 CSV."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    result = pseudonymize_csv(content)
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def extract_pdf_text(request: Request) -> Response:
+    """Upload a PDF (rubric, instructions) and return its extracted text."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    uploaded_file = request.FILES.get('file')
+    if not uploaded_file:
+        return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+    filename = uploaded_file.name.lower()
+    if not filename.endswith('.pdf'):
+        return Response(
+            {"error": "Only PDF files are supported"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return Response(
+            {"error": "File too large. Maximum size is 10MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    result = extract_text_from_pdf(uploaded_file.read())
     return Response(result)

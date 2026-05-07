@@ -116,3 +116,60 @@ def ai_tool_detail(request: Request, tool_id: int) -> Response:
     tool_data['activityHistory'] = activity_history
 
     return Response(tool_data)
+
+
+@api_view(['GET'])
+def tool_insights(request: Request) -> Response:
+    """Return institution-wide AI tool usage and compliance stats."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    from collections import Counter
+    from django.db.models import Count
+    from api.models import Checkpoint
+
+    total_tools = AITool.objects.count()
+    total_activities = Project.objects.count()
+
+    tools_with_count = (
+        AITool.objects
+        .annotate(activity_count=Count('projects'))
+        .filter(activity_count__gt=0)
+        .order_by('-activity_count')[:5]
+    )
+    top_tools = [
+        {
+            'id': t.id,
+            'name': t.name,
+            'category': t.category,
+            'activityCount': t.activity_count,
+        }
+        for t in tools_with_count
+    ]
+
+    use_case_counter = Counter(
+        Project.objects.values_list('ai_use_case', flat=True)
+    )
+    top_use_cases = [
+        {'useCase': uc, 'count': c}
+        for uc, c in use_case_counter.most_common(5)
+        if uc
+    ]
+
+    total_checkpoints = Checkpoint.objects.count()
+    completed_checkpoints = Checkpoint.objects.filter(completed=True).count()
+    pass_rate = (
+        round(100 * completed_checkpoints / total_checkpoints, 1)
+        if total_checkpoints else 0
+    )
+
+    return Response({
+        'totalTools': total_tools,
+        'totalActivities': total_activities,
+        'topTools': top_tools,
+        'topUseCases': top_use_cases,
+        'overallPassRate': pass_rate,
+        'totalCheckpoints': total_checkpoints,
+        'completedCheckpoints': completed_checkpoints,
+    })
+

@@ -15,6 +15,10 @@ from api.serializers import (
 )
 from api.services import notification_service
 from api.services.checkpoint_generator import generate_checkpoints_for_use_case
+from api.services.quick_add_parser import parse_activity_description
+from api.services.grading_prompt_generator import generate_grading_prompt
+from api.services.smart_defaults import generate_smart_defaults
+from api.serializers.project import infer_risk_context
 
 
 def get_user_projects(user):
@@ -93,9 +97,9 @@ def project_list_create(request: Request) -> Response:
     return Response(serialize_project(project), status=status.HTTP_201_CREATED)
 
 
-@api_view(['GET', 'PUT'])
+@api_view(['GET', 'PUT', 'DELETE'])
 def project_detail(request: Request, project_id: int) -> Response:
-    """Get or update a single project."""
+    """Get, update, or delete a single project."""
     if not request.user.is_authenticated:
         return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -106,6 +110,15 @@ def project_detail(request: Request, project_id: int) -> Response:
 
     if not user_can_access_project(request.user, project):
         return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'DELETE':
+        if project.user != request.user:
+            return Response(
+                {"error": "Only the activity owner can delete this activity."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     if request.method == 'PUT':
         # Only owner can edit name/description
@@ -247,3 +260,93 @@ def decision_create(request: Request, project_id: int) -> Response:
         DecisionCreateResponseSerializer(decision).data,
         status=status.HTTP_201_CREATED,
     )
+
+
+@api_view(['POST'])
+def quick_add_parse(request: Request) -> Response:
+    """Parse a free-text description into a draft activity.
+
+    Returns the parsed fields (use case, risk context, suggested tools, name)
+    without saving anything. The client confirms and the existing
+    project_list_create endpoint persists the activity.
+    """
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    description = (request.data.get('description') or '').strip()
+    if not description:
+        return Response({"error": "Description is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    available_tools = list(AITool.objects.values('id', 'name'))
+    draft = parse_activity_description(description, available_tools)
+    return Response(draft)
+
+
+@api_view(['POST'])
+def grading_prompt_view(request: Request, project_id: int) -> Response:
+    """Generate a grading prompt for the activity's AI tool, with built-in guardrails."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not user_can_access_project(request.user, project):
+        return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    rubric_text = (request.data.get('rubric_text') or '').strip()
+    if not rubric_text:
+        return Response({"error": "rubric_text is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    ai_tool_name = (request.data.get('ai_tool_name') or '').strip() or None
+    if not ai_tool_name:
+        first_tool = project.ai_tools.first()
+        if first_tool:
+            ai_tool_name = first_tool.name
+
+    checkpoint_ids = set(project.checkpoints.values_list('checkpoint_id', flat=True))
+    risk_context = infer_risk_context(checkpoint_ids)
+
+    result = generate_grading_prompt(
+        activity_name=project.name,
+        activity_description=project.description or '',
+        rubric_text=rubric_text,
+        risk_context=risk_context,
+        ai_tool_name=ai_tool_name,
+    )
+    return Response(result)
+
+
+@api_view(['GET'])
+def smart_defaults_view(request: Request, project_id: int) -> Response:
+    """Return draft attestations for incomplete non-scannable checkpoints."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        project = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if not user_can_access_project(request.user, project):
+        return Response({"error": "Activity not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    checkpoint_ids = set(project.checkpoints.values_list('checkpoint_id', flat=True))
+    risk_context = infer_risk_context(checkpoint_ids)
+    tool_names = list(project.ai_tools.values_list('name', flat=True))
+
+    incomplete = list(
+        project.checkpoints
+        .filter(completed=False)
+        .values('checkpoint_id', 'label')
+    )
+
+    drafts = generate_smart_defaults(
+        use_case=project.ai_use_case,
+        risk_context=risk_context,
+        tools=tool_names,
+        incomplete_checkpoints=incomplete,
+    )
+    return Response({'drafts': drafts})
