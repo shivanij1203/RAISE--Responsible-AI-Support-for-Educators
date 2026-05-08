@@ -86,6 +86,7 @@ class ProjectSerializer(serializers.Serializer):
     decisions = serializers.SerializerMethodField()
     aiTools = _AIToolRefSerializer(source='ai_tools', many=True)
     riskContext = serializers.SerializerMethodField()
+    shareAsExample = serializers.BooleanField(source='share_as_example')
 
     def get_id(self, obj) -> str:
         return str(obj.id)

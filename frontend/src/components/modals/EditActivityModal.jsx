@@ -7,6 +7,7 @@ function EditActivityModal({ project, role, onClose, onSaved }) {
   const [editDescription, setEditDescription] = useState(project.description || '');
   const [editCollaboratorEmail, setEditCollaboratorEmail] = useState('');
   const [editRiskContext, setEditRiskContext] = useState(project.riskContext || {});
+  const [shareAsExample, setShareAsExample] = useState(project.shareAsExample !== false);
   const [editError, setEditError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -18,6 +19,7 @@ function EditActivityModal({ project, role, onClose, onSaved }) {
         name: editName.trim(),
         description: editDescription,
         risk_context: editRiskContext,
+        share_as_example: shareAsExample,
       };
       if (editCollaboratorEmail.trim()) {
         const field = role === 'pi' ? 'student_collaborator_email' : 'faculty_advisor_email';
@@ -129,6 +131,20 @@ function EditActivityModal({ project, role, onClose, onSaved }) {
             <div>
               <span className="rq-text">This is part of a human subjects research study</span>
               <span className="rq-hint">Requires or may require IRB approval</span>
+            </div>
+          </label>
+        </div>
+
+        <div className="form-group">
+          <label className="risk-question" style={{ marginTop: '0.5rem' }}>
+            <input
+              type="checkbox"
+              checked={shareAsExample}
+              onChange={(e) => setShareAsExample(e.target.checked)}
+            />
+            <div>
+              <span className="rq-text">Share this activity as an anonymized use case</span>
+              <span className="rq-hint">When on, this activity appears in the institutional Use Cases tab so other faculty and students can learn from it. Owner identity is never shown. Uncheck to keep this activity private.</span>
             </div>
           </label>
         </div>

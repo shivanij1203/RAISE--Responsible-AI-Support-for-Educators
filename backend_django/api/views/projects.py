@@ -80,6 +80,7 @@ def project_list_create(request: Request) -> Response:
         ai_use_case=ai_use_case,
         faculty_advisor=faculty_advisor,
         student_collaborator=student_collab,
+        share_as_example=bool(request.data.get('share_as_example', False)),
     )
 
     # Generate checkpoints based on use case + risk context
@@ -121,12 +122,14 @@ def project_detail(request: Request, project_id: int) -> Response:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     if request.method == 'PUT':
-        # Only owner can edit name/description
+        # Only owner can edit name/description and share-as-example flag
         if project.user == request.user:
             if 'name' in request.data:
                 project.name = request.data['name'].strip()
             if 'description' in request.data:
                 project.description = request.data['description']
+            if 'share_as_example' in request.data:
+                project.share_as_example = bool(request.data['share_as_example'])
 
         # Owner can set/change faculty advisor
         faculty_email = request.data.get('faculty_advisor_email', '').strip().lower()
@@ -350,3 +353,86 @@ def smart_defaults_view(request: Request, project_id: int) -> Response:
         incomplete_checkpoints=incomplete,
     )
     return Response({'drafts': drafts})
+
+
+@api_view(['GET'])
+def activity_library(request: Request) -> Response:
+    """Return de-identified activity summaries for the institutional Use Cases library."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    use_case_filter = request.query_params.get('use_case', '').strip()
+    tool_filter = request.query_params.get('tool', '').strip()
+
+    qs = Project.objects.filter(share_as_example=True).prefetch_related('ai_tools', 'checkpoints')
+    if use_case_filter:
+        qs = qs.filter(ai_use_case=use_case_filter)
+    if tool_filter:
+        qs = qs.filter(ai_tools__name__iexact=tool_filter)
+
+    qs = qs.order_by('-created_at').distinct()
+
+    items: list[dict] = []
+    for p in qs:
+        checkpoints = list(p.checkpoints.all())
+        total = len(checkpoints)
+        completed = sum(1 for c in checkpoints if c.completed)
+        items.append({
+            'id': p.id,
+            'name': p.name,
+            'description': p.description or '',
+            'aiUseCase': p.ai_use_case,
+            'tools': list(p.ai_tools.values_list('name', flat=True)),
+            'completedCount': completed,
+            'totalCount': total,
+            'completionPct': round(100 * completed / total) if total else 0,
+            'createdAt': p.created_at.isoformat(),
+        })
+
+    return Response({'items': items, 'totalCount': len(items)})
+
+
+@api_view(['GET'])
+def activity_library_detail(request: Request, project_id: int) -> Response:
+    """Return a read-only de-identified view of a single shared activity."""
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        project = Project.objects.get(id=project_id, share_as_example=True)
+    except Project.DoesNotExist:
+        return Response({"error": "Use case not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    checkpoint_ids = set(project.checkpoints.values_list('checkpoint_id', flat=True))
+    risk_context = infer_risk_context(checkpoint_ids)
+
+    completed_checkpoints = [
+        {
+            'id': c.checkpoint_id,
+            'label': c.label,
+            'category': c.category,
+            'completedAt': c.completed_at.isoformat() if c.completed_at else None,
+        }
+        for c in project.checkpoints.filter(completed=True).order_by('category', 'label')
+    ]
+
+    pending_checkpoints = [
+        {
+            'id': c.checkpoint_id,
+            'label': c.label,
+            'category': c.category,
+        }
+        for c in project.checkpoints.filter(completed=False).order_by('category', 'label')
+    ]
+
+    return Response({
+        'id': project.id,
+        'name': project.name,
+        'description': project.description or '',
+        'aiUseCase': project.ai_use_case,
+        'tools': list(project.ai_tools.values_list('name', flat=True)),
+        'riskContext': risk_context,
+        'completedCheckpoints': completed_checkpoints,
+        'pendingCheckpoints': pending_checkpoints,
+        'createdAt': project.created_at.isoformat(),
+    })

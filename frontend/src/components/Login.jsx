@@ -116,6 +116,17 @@ function Login({ onLogin, onBack, prefillDemo = false }) {
             <button type="submit" className="btn-primary login-submit" disabled={loading}>
               {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
             </button>
+
+            {isRegister && (
+              <p className="login-consent">
+                By creating an account, you agree that anonymized aggregate stats (such as which tools
+                are used, how many activities are registered, and overall checkpoint pass rates) may
+                contribute to ongoing research at the USF Behavioral AI Research Lab on responsible AI
+                use in higher education. Your individual activity descriptions stay private by default;
+                you can choose to share any specific activity as an anonymized example for other faculty
+                from the activity itself.
+              </p>
+            )}
           </form>
 
           <p className="login-switch">

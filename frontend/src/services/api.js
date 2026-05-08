@@ -32,7 +32,7 @@ export async function fetchProjects() {
   return res.data;
 }
 
-export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '', riskContext = {}) {
+export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '', riskContext = {}, shareAsExample = false) {
   const res = await api.post('/projects', {
     name,
     description,
@@ -41,13 +41,23 @@ export async function createProject(name, description, aiUseCase, aiToolIds = []
     faculty_advisor_email: facultyAdvisorEmail,
     student_collaborator_email: studentCollaboratorEmail,
     risk_context: riskContext,
+    share_as_example: shareAsExample,
   });
+  return res.data;
+}
+
+export async function parseQuickAddActivity(description) {
+  const res = await api.post('/projects/quick-add/parse', { description });
   return res.data;
 }
 
 export async function fetchProject(projectId) {
   const res = await api.get(`/projects/${projectId}`);
   return res.data;
+}
+
+export async function deleteProject(projectId) {
+  await api.delete(`/projects/${projectId}`);
 }
 
 export async function updateProject(projectId, data) {
@@ -84,6 +94,11 @@ export async function createTool(data) {
 
 export async function updateTool(toolId, data) {
   const res = await api.put(`/tools/${toolId}`, data);
+  return res.data;
+}
+
+export async function fetchToolInsights() {
+  const res = await api.get('/tools/insights');
   return res.data;
 }
 
@@ -135,6 +150,60 @@ export async function getFileColumns(file) {
   const formData = new FormData();
   formData.append('file', file);
   const res = await api.post('/verify/file-columns', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function generateGradingPrompt(projectId, rubricText, aiToolName = '') {
+  const res = await api.post(`/projects/${projectId}/grading-prompt`, {
+    rubric_text: rubricText,
+    ai_tool_name: aiToolName,
+  });
+  return res.data;
+}
+
+export async function fetchSmartDefaults(projectId) {
+  const res = await api.get(`/projects/${projectId}/smart-defaults`);
+  return res.data;
+}
+
+export async function fetchActivityLibrary(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.useCase) params.set('use_case', filters.useCase);
+  if (filters.tool) params.set('tool', filters.tool);
+  const qs = params.toString();
+  const res = await api.get(`/activities/library${qs ? '?' + qs : ''}`);
+  return res.data;
+}
+
+export async function fetchActivityLibraryDetail(projectId) {
+  const res = await api.get(`/activities/library/${projectId}`);
+  return res.data;
+}
+
+export async function redactPiiInFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/verify/redact-pii', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function extractPdfText(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/verify/extract-pdf', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function blindGradeCsv(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await api.post('/verify/blind-grade-csv', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return res.data;

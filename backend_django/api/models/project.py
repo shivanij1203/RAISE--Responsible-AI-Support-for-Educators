@@ -20,6 +20,11 @@ class Project(models.Model):
     ai_use_case = models.CharField(max_length=50)
     status = models.CharField(max_length=20, default='active')
     ai_tools = models.ManyToManyField('api.AITool', blank=True, related_name='projects')
+    share_as_example = models.BooleanField(
+        default=False,
+        help_text='If True, this activity appears anonymized in the institutional Use Cases library. '
+                  'Defaults to False so activities are private until the owner explicitly opts in.'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

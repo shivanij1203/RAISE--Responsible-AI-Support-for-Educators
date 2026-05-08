@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { fetchTools, createTool, updateTool, fetchToolDetail } from '../services/api';
+import { fetchTools, createTool, updateTool, fetchToolDetail, fetchToolInsights } from '../services/api';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
+import { lookupDossier } from '../constants/toolDossiers';
+import { USE_CASE_LABELS_SHORT } from '../constants/useCases';
 
 const AI_CATEGORIES = [
   { value: 'chatbot', label: 'Chatbot' },
@@ -27,8 +29,9 @@ const GENERAL_CATEGORIES = [
 
 const ALL_CATEGORIES = [...AI_CATEGORIES, ...GENERAL_CATEGORIES.filter(g => !AI_CATEGORIES.find(a => a.value === g.value))];
 
-function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
+function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard, onViewUseCases }) {
   const [tools, setTools] = useState([]);
+  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -43,7 +46,7 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
 
   const isFaculty = role === 'pi';
 
-  useEffect(() => { loadTools(); }, []);
+  useEffect(() => { loadTools(); loadInsights(); }, []);
 
   async function loadTools() {
     try {
@@ -53,6 +56,15 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
       console.error('Failed to load tools', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadInsights() {
+    try {
+      const data = await fetchToolInsights();
+      setInsights(data);
+    } catch (err) {
+      console.error('Failed to load insights', err);
     }
   }
 
@@ -139,7 +151,7 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
         <div className="pl-nav">
           <div className="pl-nav-inner">
             <button className="pl-nav-tab" onClick={onBack}>My Activities</button>
-            <button className="pl-nav-tab active">Tool Library</button>
+            <button className="pl-nav-tab active">Tool Insights</button>
           </div>
         </div>
         <div className="tool-registry-content">
@@ -179,7 +191,8 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
       <div className="pl-nav">
         <div className="pl-nav-inner">
           <button className="pl-nav-tab" onClick={onBack}>My Activities</button>
-          <button className="pl-nav-tab active">Tool Library</button>
+          <button className="pl-nav-tab active">Tool Insights</button>
+          {onViewUseCases && <button className="pl-nav-tab" onClick={onViewUseCases}>Use Cases</button>}
           <button className="pl-nav-tab" onClick={onViewDashboard}>Compliance Overview</button>
         </div>
       </div>
@@ -188,10 +201,66 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
       <div className="tool-registry-content">
         <div className="tool-registry-title-row">
           <div>
-            <h2 className="tool-registry-heading">Tool Library</h2>
-            <p className="tool-subtitle">A reference library of AI and productivity tools commonly used in higher education. Each tool includes data handling details, compliance guidance by use case, and a record of how faculty and students have used it.</p>
+            <h2 className="tool-registry-heading">Tool Insights</h2>
+            <p className="tool-subtitle">
+              The institutional inventory of AI tools in use, with a compliance dossier per tool and live usage stats.
+              Anonymized usage data contributes to ongoing research at the USF Behavioral AI Research Lab on
+              responsible AI use in higher education.
+            </p>
           </div>
         </div>
+
+        {insights && (
+          <div className="ti-glance">
+            <div className="ti-glance-stats">
+              <div className="ti-stat">
+                <div className="ti-stat-value">{insights.totalTools}</div>
+                <div className="ti-stat-label">Tools tracked</div>
+              </div>
+              <div className="ti-stat">
+                <div className="ti-stat-value">{insights.totalActivities}</div>
+                <div className="ti-stat-label">Activities registered</div>
+              </div>
+              <div className="ti-stat">
+                <div className="ti-stat-value">{insights.overallPassRate}%</div>
+                <div className="ti-stat-label">Checkpoint pass rate</div>
+              </div>
+              <div className="ti-stat">
+                <div className="ti-stat-value">{insights.completedCheckpoints}/{insights.totalCheckpoints}</div>
+                <div className="ti-stat-label">Checkpoints complete</div>
+              </div>
+            </div>
+
+            <div className="ti-glance-cols">
+              {insights.topTools.length > 0 && (
+                <div className="ti-glance-col">
+                  <div className="ti-glance-col-title">Most-used tools</div>
+                  <ul className="ti-glance-list">
+                    {insights.topTools.map((t) => (
+                      <li key={t.id}>
+                        <span className="ti-rank">{t.name}</span>
+                        <span className="ti-rank-meta">{t.activityCount} {t.activityCount === 1 ? 'activity' : 'activities'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {insights.topUseCases.length > 0 && (
+                <div className="ti-glance-col">
+                  <div className="ti-glance-col-title">Top use cases</div>
+                  <ul className="ti-glance-list">
+                    {insights.topUseCases.map((u) => (
+                      <li key={u.useCase}>
+                        <span className="ti-rank">{USE_CASE_LABELS_SHORT[u.useCase] || u.useCase}</span>
+                        <span className="ti-rank-meta">{u.count} {u.count === 1 ? 'activity' : 'activities'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="tool-filters">
@@ -283,6 +352,20 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
           </>
         )}
 
+        <div className="ti-research-footer">
+          <div className="ti-research-title">Why this data exists</div>
+          <p className="ti-research-text">
+            The activity records you create here generate anonymized signals about which AI tools
+            are used in higher education, which compliance checkpoints pass, and where the gaps
+            are. These signals feed ongoing research at the
+            {' '}<a href="https://www.usf.edu/business/centers/behavioral-ai-research/" target="_blank" rel="noopener noreferrer">
+              USF Behavioral AI Research Lab
+            </a>{' '}
+            on responsible AI use, and they shape how RAISE itself improves over time. Personal
+            information is removed before any data leaves your institutional context.
+          </p>
+        </div>
+
       </div>
 
       {/* Add/Edit Modal */}
@@ -369,6 +452,44 @@ function AIToolRegistry({ user, role, onLogout, onBack, onViewDashboard }) {
             </div>
 
             {selectedTool.description && <p className="td-desc">{selectedTool.description}</p>}
+
+            {(() => {
+              const dossier = lookupDossier(selectedTool.name);
+              if (!dossier) return null;
+              return (
+                <div className="td-section ti-dossier">
+                  <h3 className="td-section-title">Compliance dossier</h3>
+                  <p className="ti-dossier-sub">Curated by RAISE from public vendor policies. Verify with your institution before relying on it.</p>
+                  <div className="ti-dossier-grid">
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">Data retention</div>
+                      <div className="ti-dossier-value">{dossier.dataRetention}</div>
+                    </div>
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">Training opt-out</div>
+                      <div className="ti-dossier-value">{dossier.trainingOptOut}</div>
+                    </div>
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">FERPA suitability</div>
+                      <div className="ti-dossier-value">{dossier.ferpaSafe}</div>
+                    </div>
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">EU AI Act class</div>
+                      <div className="ti-dossier-value">{dossier.euAiActClass}</div>
+                    </div>
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">Recommended for</div>
+                      <div className="ti-dossier-value">{(dossier.recommendedFor || []).join(', ')}</div>
+                    </div>
+                    <div className="ti-dossier-item">
+                      <div className="ti-dossier-label">Not recommended for</div>
+                      <div className="ti-dossier-value">{(dossier.notRecommendedFor || []).join(', ')}</div>
+                    </div>
+                  </div>
+                  {dossier.notes && <p className="ti-dossier-notes">{dossier.notes}</p>}
+                </div>
+              );
+            })()}
 
             {/* Data & Privacy — simple table */}
             <div className="td-section">

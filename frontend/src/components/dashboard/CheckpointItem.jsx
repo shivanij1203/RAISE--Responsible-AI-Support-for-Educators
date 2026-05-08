@@ -1,13 +1,5 @@
 import CheckpointComments from '../CheckpointComments';
 
-const SCANNABLE_CHECKPOINTS = [
-  'data_deidentified',
-  'ferpa_compliance',
-  'data_classification',
-  'bias_audit',
-  'admin_bias_audit',
-];
-
 function frameworkClass(fw) {
   return `framework-badge fw-${fw.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
 }
@@ -38,10 +30,9 @@ function AuditTrail({ decisions }) {
   );
 }
 
-function CheckpointItem({ checkpoint, role, saving, expanded, decisions, projectId, onToggleExpanded, onLog, onVerify, onReopen }) {
+function CheckpointItem({ checkpoint, role, saving, expanded, decisions, projectId, onToggleExpanded, onLog, onReopen }) {
   const isCompliance = role === 'compliance';
   const isStudent = role === 'student';
-  const showScan = !isCompliance && SCANNABLE_CHECKPOINTS.includes(checkpoint.id) && !checkpoint.completed;
   const showLog = !isCompliance && !checkpoint.completed;
   const showCompletedActions = !isCompliance && checkpoint.completed;
   const showInfoBtn = !isStudent && checkpoint.what;
@@ -82,9 +73,6 @@ function CheckpointItem({ checkpoint, role, saving, expanded, decisions, project
           <button className="help-btn always-visible" onClick={onToggleExpanded} title="Learn what this means">
             {expanded ? 'Hide' : 'Guide'}
           </button>
-        )}
-        {showScan && (
-          <button className="log-btn scan" onClick={onVerify} title="Auto-verify this checkpoint">Verify</button>
         )}
         {showLog && (
           <button className="log-btn primary" onClick={onLog} title="Log completion">Log</button>

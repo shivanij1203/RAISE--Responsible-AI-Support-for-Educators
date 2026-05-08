@@ -5,6 +5,7 @@ import ProjectList from './components/ProjectList';
 import ProjectDashboard from './components/ProjectDashboard';
 import InstitutionalDashboard from './components/InstitutionalDashboard';
 import AIToolRegistry from './components/AIToolRegistry';
+import UseCases from './components/UseCases';
 import './App.css';
 
 // Map auth roles to dashboard roles
@@ -19,6 +20,7 @@ function App() {
   const [userRole, setUserRole] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [loginPrefill, setLoginPrefill] = useState(false);
+  const [templateSeed, setTemplateSeed] = useState(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('raise_user');
@@ -57,28 +59,31 @@ function App() {
     setCurrentView('projects');
   }
 
+  let view;
   if (currentView === 'loading') {
-    return <div className="loading">Loading...</div>;
-  }
-
-  if (currentView === 'landing') {
-    return <Landing onGetStarted={(opts) => { setLoginPrefill(!!opts?.prefill); setCurrentView('login'); }} />;
-  }
-
-  if (currentView === 'login') {
-    return <Login onLogin={handleLogin} onBack={() => setCurrentView('landing')} prefillDemo={loginPrefill} />;
-  }
-
-  if (currentView === 'dashboard') {
-    return <InstitutionalDashboard user={currentUser} role={userRole} onLogout={handleLogout} onBack={() => setCurrentView('projects')} onViewToolRegistry={() => setCurrentView('tool-registry')} />;
-  }
-
-  if (currentView === 'tool-registry') {
-    return <AIToolRegistry user={currentUser} role={userRole} onLogout={handleLogout} onBack={() => setCurrentView('projects')} onViewDashboard={() => setCurrentView('dashboard')} />;
-  }
-
-  if (currentView === 'project-detail' && selectedProject) {
-    return (
+    view = <div className="loading">Loading...</div>;
+  } else if (currentView === 'landing') {
+    view = <Landing onGetStarted={(opts) => { setLoginPrefill(!!opts?.prefill); setCurrentView('login'); }} />;
+  } else if (currentView === 'login') {
+    view = <Login onLogin={handleLogin} onBack={() => setCurrentView('landing')} prefillDemo={loginPrefill} />;
+  } else if (currentView === 'dashboard') {
+    view = <InstitutionalDashboard user={currentUser} role={userRole} onLogout={handleLogout} onBack={() => setCurrentView('projects')} onViewToolRegistry={() => setCurrentView('tool-registry')} />;
+  } else if (currentView === 'tool-registry') {
+    view = <AIToolRegistry user={currentUser} role={userRole} onLogout={handleLogout} onBack={() => setCurrentView('projects')} onViewDashboard={() => setCurrentView('dashboard')} onViewUseCases={() => setCurrentView('use-cases')} />;
+  } else if (currentView === 'use-cases') {
+    view = (
+      <UseCases
+        user={currentUser}
+        role={userRole}
+        onLogout={handleLogout}
+        onBack={() => setCurrentView('projects')}
+        onViewToolRegistry={() => setCurrentView('tool-registry')}
+        onViewDashboard={() => setCurrentView('dashboard')}
+        onUseAsTemplate={(seed) => { setTemplateSeed(seed); setCurrentView('projects'); }}
+      />
+    );
+  } else if (currentView === 'project-detail' && selectedProject) {
+    view = (
       <ProjectDashboard
         project={selectedProject}
         user={currentUser}
@@ -88,19 +93,34 @@ function App() {
         onProjectUpdated={(updated) => setSelectedProject(updated)}
         onViewToolRegistry={() => setCurrentView('tool-registry')}
         onViewDashboard={() => setCurrentView('dashboard')}
+        onViewUseCases={() => setCurrentView('use-cases')}
+      />
+    );
+  } else {
+    view = (
+      <ProjectList
+        user={currentUser}
+        role={userRole}
+        onSelectProject={handleSelectProject}
+        onLogout={handleLogout}
+        onViewDashboard={() => setCurrentView('dashboard')}
+        onViewToolRegistry={() => setCurrentView('tool-registry')}
+        onViewUseCases={() => setCurrentView('use-cases')}
+        templateSeed={templateSeed}
+        onTemplateConsumed={() => setTemplateSeed(null)}
       />
     );
   }
 
   return (
-    <ProjectList
-      user={currentUser}
-      role={userRole}
-      onSelectProject={handleSelectProject}
-      onLogout={handleLogout}
-      onViewDashboard={() => setCurrentView('dashboard')}
-      onViewToolRegistry={() => setCurrentView('tool-registry')}
-    />
+    <>
+      <div className="prototype-banner" role="status" aria-label="Prototype notice">
+        <span className="prototype-banner-dot" aria-hidden="true"></span>
+        Prototype · For TiE 2026 demonstration · Demo data only · Not connected to live student records
+      </div>
+      <div className="prototype-banner-spacer" aria-hidden="true"></div>
+      {view}
+    </>
   );
 }
 

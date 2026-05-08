@@ -1,7 +1,7 @@
 from django.urls import path
 
 from .views.auth import register, login_view, logout_view, me
-from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create, quick_add_parse, grading_prompt_view, smart_defaults_view
+from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create, quick_add_parse, grading_prompt_view, smart_defaults_view, activity_library, activity_library_detail
 from .views.tools import ai_tool_list_create, ai_tool_update, ai_tool_detail, tool_insights
 from .views.dashboard import dashboard_stats
 from .views.comments import checkpoint_comments
@@ -25,6 +25,8 @@ urlpatterns = [
     path('projects/quick-add/parse', quick_add_parse, name='project-quick-add-parse'),
     path('projects/<int:project_id>/grading-prompt', grading_prompt_view, name='project-grading-prompt'),
     path('projects/<int:project_id>/smart-defaults', smart_defaults_view, name='project-smart-defaults'),
+    path('activities/library', activity_library, name='activity-library'),
+    path('activities/library/<int:project_id>', activity_library_detail, name='activity-library-detail'),
     path('projects/<int:project_id>', project_detail, name='project-detail'),
     path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>', checkpoint_toggle, name='checkpoint-toggle'),
     path('projects/<int:project_id>/decisions', decision_create, name='decision-create'),

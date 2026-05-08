@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { toggleCheckpoint, logDecision, fetchTools } from '../services/api';
+import { toggleCheckpoint, logDecision, fetchTools, deleteProject } from '../services/api';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
 import LogDecisionModal from './modals/LogDecisionModal';
-import VerificationScanModal from './modals/VerificationScanModal';
+import DatasetVerificationModal from './modals/DatasetVerificationModal';
+import SmartDefaultsModal from './modals/SmartDefaultsModal';
 import DisclosureModal from './modals/DisclosureModal';
 import EditActivityModal from './modals/EditActivityModal';
 import DashboardHeader from './dashboard/DashboardHeader';
@@ -13,13 +14,29 @@ import { getCompletionPercentage, getRiskAssessment } from '../utils/risk';
 import { generateDisclosure } from '../utils/disclosure';
 import { generateComplianceReport } from '../utils/complianceReport';
 
-function ProjectDashboard({ project: initialProject, user, role, onBack, onLogout, onProjectUpdated, onViewToolRegistry, onViewDashboard }) {
+function ProjectDashboard({ project: initialProject, user, role, onBack, onLogout, onProjectUpdated, onViewToolRegistry, onViewDashboard, onViewUseCases }) {
   const [project, setProject] = useState(initialProject);
   const [expandedCheckpoint, setExpandedCheckpoint] = useState(null);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [logCheckpointId, setLogCheckpointId] = useState(null);
-  const [scanCheckpointId, setScanCheckpointId] = useState(null);
+  const [showDatasetVerify, setShowDatasetVerify] = useState(false);
+  const [showSmartDefaults, setShowSmartDefaults] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isOwner = !!user?.email && project.ownerEmail === user.email;
+
+  async function handleDeleteActivity() {
+    setDeleting(true);
+    try {
+      await deleteProject(project.id);
+      onBack();
+    } catch (err) {
+      console.error('Failed to delete activity', err);
+      setDeleting(false);
+    }
+  }
   const [showDisclosure, setShowDisclosure] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [availableTools, setAvailableTools] = useState([]);
@@ -130,7 +147,8 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
       <div className="pl-nav">
         <div className="pl-nav-inner">
           <button className="pl-nav-tab" onClick={onBack}>My Activities</button>
-          <button className="pl-nav-tab" onClick={onViewToolRegistry}>Tool Library</button>
+          <button className="pl-nav-tab" onClick={onViewToolRegistry}>Tool Insights</button>
+          {onViewUseCases && <button className="pl-nav-tab" onClick={onViewUseCases}>Use Cases</button>}
           <button className="pl-nav-tab" onClick={onViewDashboard}>Compliance Overview</button>
         </div>
       </div>
@@ -139,8 +157,10 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
         <DashboardHeader
           project={project}
           onEdit={() => setShowEditModal(true)}
+          onDelete={() => setShowDeleteConfirm(true)}
           onDisclosure={() => setShowDisclosure(true)}
           onExport={handleExportReport}
+          isOwner={isOwner}
         />
 
         <ProgressOverview
@@ -150,8 +170,12 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
           riskLevel={riskAssessment.overallRisk}
         />
 
-        <div className="dashboard-tabs">
+        <div className="dashboard-tabs dashboard-tabs-row">
           <button className="tab active">Compliance Tracker</button>
+          <div className="pd-tab-actions">
+            <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowSmartDefaults(true)} data-tip="Pre-fill draft answers for remaining checkpoints">Pre-fill Checkpoints</button>
+            <button className="pd-tab-action tooltip-host" onClick={() => setShowDatasetVerify(true)} data-tip="Run all applicable checks on a dataset">Verify Dataset</button>
+          </div>
         </div>
 
         <div className="checkpoints-section">
@@ -172,7 +196,6 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
                       projectId={project.id}
                       onToggleExpanded={() => toggleExpanded(checkpoint.id)}
                       onLog={() => setLogCheckpointId(checkpoint.id)}
-                      onVerify={() => setScanCheckpointId(checkpoint.id)}
                       onReopen={() => handleCheckpointToggle(checkpoint.id)}
                     />
                   ))}
@@ -192,10 +215,38 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
           />
         )}
 
-        {scanCheckpointId && (
-          <VerificationScanModal
-            checkpointId={scanCheckpointId}
-            onClose={() => setScanCheckpointId(null)}
+        {showDatasetVerify && (
+          <DatasetVerificationModal
+            project={project}
+            onClose={() => setShowDatasetVerify(false)}
+            onCheckpointApplied={(checkpointId) => {
+              const updatedCheckpoints = project.checkpoints.map(cp =>
+                cp.id === checkpointId
+                  ? { ...cp, completed: true, completedAt: new Date().toISOString() }
+                  : cp
+              );
+              const updatedProject = { ...project, checkpoints: updatedCheckpoints };
+              setProject(updatedProject);
+              if (onProjectUpdated) onProjectUpdated(updatedProject);
+              showToast('Checkpoint complete ✓');
+            }}
+          />
+        )}
+
+        {showSmartDefaults && (
+          <SmartDefaultsModal
+            project={project}
+            onClose={() => setShowSmartDefaults(false)}
+            onCheckpointApplied={(checkpointId) => {
+              const updatedCheckpoints = project.checkpoints.map(cp =>
+                cp.id === checkpointId
+                  ? { ...cp, completed: true, completedAt: new Date().toISOString() }
+                  : cp
+              );
+              const updatedProject = { ...project, checkpoints: updatedCheckpoints };
+              setProject(updatedProject);
+              if (onProjectUpdated) onProjectUpdated(updatedProject);
+            }}
           />
         )}
 
@@ -220,6 +271,26 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
               showToast('Activity updated');
             }}
           />
+        )}
+
+        {showDeleteConfirm && (
+          <div className="modal-overlay" onClick={() => !deleting && setShowDeleteConfirm(false)}>
+            <div className="modal modal-confirm" onClick={(e) => e.stopPropagation()}>
+              <h2>Delete this activity?</h2>
+              <p className="confirm-text">
+                This will permanently delete <strong>{project.name}</strong>, including all its
+                checkpoints, decisions, and evidence. This action cannot be undone.
+              </p>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+                  Cancel
+                </button>
+                <button className="btn-danger" onClick={handleDeleteActivity} disabled={deleting}>
+                  {deleting ? 'Deleting...' : 'Delete activity'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
