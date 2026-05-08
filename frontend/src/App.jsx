@@ -116,10 +116,17 @@ function App() {
     <>
       <div className="prototype-banner" role="status" aria-label="Prototype notice">
         <span className="prototype-banner-dot" aria-hidden="true"></span>
-        Prototype · For TiE 2026 demonstration · Demo data only · Not connected to live student records
+        Prototype · Demo data only · Not connected to live student records
       </div>
       <div className="prototype-banner-spacer" aria-hidden="true"></div>
       {view}
+      <footer className="global-footer">
+        <span>&copy; 2026 University of South Florida. All rights reserved.</span>
+        <span className="global-footer-sep" aria-hidden="true">·</span>
+        <span>RAISE Ethics Toolkit</span>
+        <span className="global-footer-sep" aria-hidden="true">·</span>
+        <span>Behavioral AI Research Lab</span>
+      </footer>
     </>
   );
 }

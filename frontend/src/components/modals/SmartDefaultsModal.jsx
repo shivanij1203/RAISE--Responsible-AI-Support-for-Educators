@@ -86,7 +86,7 @@ function SmartDefaultsModal({ project, onClose, onCheckpointApplied }) {
     return (
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
-          <h2>Pre-fill Checkpoints</h2>
+          <h2>Draft Checkpoints</h2>
           <p>Loading drafts...</p>
         </div>
       </div>
@@ -97,7 +97,7 @@ function SmartDefaultsModal({ project, onClose, onCheckpointApplied }) {
     return (
       <div className="modal-overlay" onClick={onClose}>
         <div className="modal" onClick={(e) => e.stopPropagation()}>
-          <h2>Pre-fill Checkpoints</h2>
+          <h2>Draft Checkpoints</h2>
           <p className="sd-empty">
             No checkpoints to pre-fill. Either everything is already complete, or the
             remaining items need manual entry.
@@ -117,7 +117,7 @@ function SmartDefaultsModal({ project, onClose, onCheckpointApplied }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-        <h2>Pre-fill Checkpoints</h2>
+        <h2>Draft Checkpoints</h2>
         <p className="sd-subtitle">
           RAISE drafted answers for {drafts.length} checkpoints based on your activity
           context. Review each, edit if needed, and save them as evidence in one click.

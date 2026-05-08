@@ -173,7 +173,7 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
         <div className="dashboard-tabs dashboard-tabs-row">
           <button className="tab active">Compliance Tracker</button>
           <div className="pd-tab-actions">
-            <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowSmartDefaults(true)} data-tip="Pre-fill draft answers for remaining checkpoints">Pre-fill Checkpoints</button>
+            <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowSmartDefaults(true)} data-tip="Draft answers for remaining checkpoints">Draft Checkpoints</button>
             <button className="pd-tab-action tooltip-host" onClick={() => setShowDatasetVerify(true)} data-tip="Run all applicable checks on a dataset">Verify Dataset</button>
           </div>
         </div>

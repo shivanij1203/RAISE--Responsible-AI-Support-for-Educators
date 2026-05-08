@@ -132,9 +132,6 @@ function Landing({ onGetStarted }) {
               </div>
             </div>
           </div>
-          <div className="lp-footer-bottom">
-            <span>Copyright &copy; 2026, University of South Florida. All rights reserved.</span>
-          </div>
         </div>
       </footer>
 
