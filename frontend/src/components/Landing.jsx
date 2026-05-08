@@ -25,7 +25,7 @@ function Landing({ onGetStarted }) {
         <div className="lp-hero-content">
         <h1 className="lp-hero-title">RAISE Ethics Toolkit</h1>
         <p className="lp-hero-subtitle">
-          A compliance guidance platform for faculty and students using technology in research, teaching, and administration at the University of South Florida.
+          Using AI in academic work is unavoidable now, and the rules around it are easy to miss. If you're ever unsure you're using it the right way, RAISE has your back.
         </p>
         <div className="lp-hero-actions">
           <button className="lp-btn-hero" onClick={() => onGetStarted()}>Sign In to Get Started</button>

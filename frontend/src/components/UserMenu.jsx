@@ -25,7 +25,7 @@ function UserMenu({ user, role, onLogout }) {
 
   return (
     <div className="um-wrapper" ref={ref}>
-      <button className="um-trigger" onClick={() => setOpen(!open)} title={displayName}>
+      <button className="um-trigger tooltip-host" onClick={() => setOpen(!open)} data-tip="Account" aria-label={`Account menu for ${displayName}`}>
         <span className="um-avatar">{initials}</span>
         <span className="um-caret">&#9662;</span>
       </button>
