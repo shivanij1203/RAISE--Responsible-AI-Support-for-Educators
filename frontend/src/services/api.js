@@ -118,6 +118,14 @@ export async function postCheckpointComment(projectId, checkpointId, text) {
   return res.data;
 }
 
+export async function resolveCheckpointComment(projectId, checkpointId, commentId, resolved) {
+  const res = await api.post(
+    `/projects/${projectId}/checkpoints/${checkpointId}/comments/${commentId}/resolve`,
+    { resolved }
+  );
+  return res.data;
+}
+
 // Verification (automated checkpoint checks)
 export async function scanFileForPII(file, scanType = 'pii') {
   const formData = new FormData();

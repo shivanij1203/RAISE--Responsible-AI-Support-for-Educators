@@ -31,9 +31,17 @@ class CheckpointSerializer(serializers.Serializer):
     why = serializers.CharField()
     how = serializers.CharField()
     frameworks = serializers.JSONField()
+    commentCount = serializers.SerializerMethodField()
+    unresolvedCommentCount = serializers.SerializerMethodField()
 
     def get_completedAt(self, obj) -> str | None:
         return obj.completed_at.isoformat() if obj.completed_at else None
+
+    def get_commentCount(self, obj) -> int:
+        return obj.comments.count()
+
+    def get_unresolvedCommentCount(self, obj) -> int:
+        return obj.comments.filter(resolved=False).count()
 
 
 class DecisionSerializer(serializers.Serializer):

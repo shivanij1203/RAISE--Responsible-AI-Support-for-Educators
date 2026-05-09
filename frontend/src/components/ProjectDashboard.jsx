@@ -10,6 +10,7 @@ import EditActivityModal from './modals/EditActivityModal';
 import DashboardHeader from './dashboard/DashboardHeader';
 import ProgressOverview from './dashboard/ProgressOverview';
 import CheckpointItem from './dashboard/CheckpointItem';
+import WhatToDoNext from './dashboard/WhatToDoNext';
 import { getCompletionPercentage, getRiskAssessment } from '../utils/risk';
 import { generateDisclosure } from '../utils/disclosure';
 import { generateComplianceReport } from '../utils/complianceReport';
@@ -17,6 +18,7 @@ import { generateComplianceReport } from '../utils/complianceReport';
 function ProjectDashboard({ project: initialProject, user, role, onBack, onLogout, onProjectUpdated, onViewToolRegistry, onViewDashboard, onViewUseCases }) {
   const [project, setProject] = useState(initialProject);
   const [expandedCheckpoint, setExpandedCheckpoint] = useState(null);
+  const [expandedMode, setExpandedMode] = useState('info');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');
   const [logCheckpointId, setLogCheckpointId] = useState(null);
@@ -120,8 +122,13 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
     generateComplianceReport({ project, role, scope, completion, riskAssessment });
   }
 
-  function toggleExpanded(checkpointId) {
-    setExpandedCheckpoint(prev => (prev === checkpointId ? null : checkpointId));
+  function toggleExpanded(checkpointId, mode = 'info') {
+    if (expandedCheckpoint === checkpointId && expandedMode === mode) {
+      setExpandedCheckpoint(null);
+    } else {
+      setExpandedCheckpoint(checkpointId);
+      setExpandedMode(mode);
+    }
   }
 
   return (
@@ -170,6 +177,16 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
           riskLevel={riskAssessment.overallRisk}
         />
 
+        <WhatToDoNext
+          project={project}
+          onVerifyDataset={() => setShowDatasetVerify(true)}
+          onDraftCheckpoints={() => setShowSmartDefaults(true)}
+          onScrollToManual={() => {
+            const el = document.getElementById('checkpoints-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+
         <div className="dashboard-tabs dashboard-tabs-row">
           <button className="tab active">Compliance Tracker</button>
           <div className="pd-tab-actions">
@@ -178,7 +195,7 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
           </div>
         </div>
 
-        <div className="checkpoints-section">
+        <div className="checkpoints-section" id="checkpoints-section">
           {categories.map(category => (
             <div key={category} className="checkpoint-category">
               <h3 className="category-title">{category}</h3>
@@ -192,11 +209,14 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
                       role={role}
                       saving={saving}
                       expanded={expandedCheckpoint === checkpoint.id}
+                      expandedMode={expandedMode}
                       decisions={(project.decisions || []).filter(d => d.checkpoint === checkpoint.id)}
                       projectId={project.id}
-                      onToggleExpanded={() => toggleExpanded(checkpoint.id)}
+                      onToggleExpanded={(mode) => toggleExpanded(checkpoint.id, mode || 'info')}
                       onLog={() => setLogCheckpointId(checkpoint.id)}
                       onReopen={() => handleCheckpointToggle(checkpoint.id)}
+                      onVerifyDataset={() => setShowDatasetVerify(true)}
+                      onDraftCheckpoints={() => setShowSmartDefaults(true)}
                     />
                   ))}
               </div>

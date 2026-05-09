@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchCheckpointComments, postCheckpointComment } from '../services/api';
+import { fetchCheckpointComments, postCheckpointComment, resolveCheckpointComment } from '../services/api';
 
 function CheckpointComments({ projectId, checkpointId }) {
   const [comments, setComments] = useState([]);
@@ -36,6 +36,15 @@ function CheckpointComments({ projectId, checkpointId }) {
     }
   }
 
+  async function handleResolveToggle(commentId, nextResolved) {
+    try {
+      const updated = await resolveCheckpointComment(projectId, checkpointId, commentId, nextResolved);
+      setComments(comments.map((c) => (c.id === commentId ? updated : c)));
+    } catch (err) {
+      console.error('Failed to update comment', err);
+    }
+  }
+
   return (
     <div className="checkpoint-comments">
       <div className="comments-header">Discussion ({comments.length})</div>
@@ -48,7 +57,7 @@ function CheckpointComments({ projectId, checkpointId }) {
           )}
           <div className="comments-thread">
             {comments.map(c => (
-              <div key={c.id} className="comment-item">
+              <div key={c.id} className={`comment-item ${c.resolved ? 'comment-resolved' : ''}`}>
                 <div className="comment-meta">
                   <span className="comment-author">{c.userName}</span>
                   <span className={`comment-role ${c.userRole === 'faculty' ? 'role-faculty' : 'role-student'}`}>
@@ -57,6 +66,15 @@ function CheckpointComments({ projectId, checkpointId }) {
                   <span className="comment-time">
                     {new Date(c.createdAt).toLocaleDateString()} at {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
+                  {c.resolved && (
+                    <span className="comment-resolved-tag" title={`Resolved by ${c.resolvedBy || 'a collaborator'}`}>Resolved</span>
+                  )}
+                  <button
+                    className="btn-link comment-resolve-btn"
+                    onClick={() => handleResolveToggle(c.id, !c.resolved)}
+                  >
+                    {c.resolved ? 'Reopen' : 'Mark resolved'}
+                  </button>
                 </div>
                 <div className="comment-text">{c.text}</div>
               </div>

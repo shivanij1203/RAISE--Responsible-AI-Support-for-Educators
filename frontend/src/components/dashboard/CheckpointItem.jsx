@@ -1,4 +1,5 @@
 import CheckpointComments from '../CheckpointComments';
+import { categorizeCheckpoint } from '../../constants/checkpointCategories';
 
 function frameworkClass(fw) {
   return `framework-badge fw-${fw.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
@@ -30,12 +31,17 @@ function AuditTrail({ decisions }) {
   );
 }
 
-function CheckpointItem({ checkpoint, role, saving, expanded, decisions, projectId, onToggleExpanded, onLog, onReopen }) {
+function CheckpointItem({ checkpoint, role, saving, expanded, expandedMode, decisions, projectId, onToggleExpanded, onLog, onReopen, onVerifyDataset, onDraftCheckpoints }) {
   const isCompliance = role === 'compliance';
   const isStudent = role === 'student';
-  const showLog = !isCompliance && !checkpoint.completed;
+  const category = categorizeCheckpoint(checkpoint.id);
+  const isAutomated = category === 'scannable' || category === 'draftable';
+  const showLog = !isCompliance && !checkpoint.completed && !isAutomated;
+  const showAutomatedHint = !isCompliance && !checkpoint.completed && isAutomated;
   const showCompletedActions = !isCompliance && checkpoint.completed;
   const showInfoBtn = !isStudent && checkpoint.what;
+  const totalComments = checkpoint.commentCount || 0;
+  const unresolvedComments = checkpoint.unresolvedCommentCount || 0;
 
   const completedDate = checkpoint.completedAt
     ? new Date(checkpoint.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -51,13 +57,26 @@ function CheckpointItem({ checkpoint, role, saving, expanded, decisions, project
         </div>
         <div className="checkpoint-content">
           <span className="checkpoint-label">{checkpoint.label}</span>
-          {checkpoint.frameworks?.length > 0 && (
-            <div className="framework-badges">
-              {checkpoint.frameworks.map(fw => (
-                <span key={fw} className={frameworkClass(fw)}>{fw}</span>
-              ))}
-            </div>
-          )}
+          <div className="framework-badges">
+            {checkpoint.frameworks?.map(fw => (
+              <span key={fw} className={frameworkClass(fw)}>{fw}</span>
+            ))}
+            <button
+              type="button"
+              className={`comment-badge comment-badge-btn ${unresolvedComments > 0 ? 'comment-badge-unresolved' : ''} ${expanded && expandedMode === 'discussion' ? 'comment-badge-active' : ''}`}
+              onClick={() => onToggleExpanded('discussion')}
+              title={
+                totalComments === 0
+                  ? 'Start a discussion'
+                  : unresolvedComments > 0
+                  ? `${unresolvedComments} unresolved of ${totalComments} comment${totalComments === 1 ? '' : 's'}`
+                  : `${totalComments} comment${totalComments === 1 ? '' : 's'}`
+              }
+            >
+              💬 {totalComments > 0 ? totalComments : 'Discuss'}
+              {unresolvedComments > 0 ? ` · ${unresolvedComments} open` : ''}
+            </button>
+          </div>
           {checkpoint.completed ? (
             <span className="checkpoint-date completed-date">Completed {completedDate}</span>
           ) : (
@@ -65,17 +84,26 @@ function CheckpointItem({ checkpoint, role, saving, expanded, decisions, project
           )}
         </div>
         {showInfoBtn && (
-          <button className="help-btn" onClick={onToggleExpanded} title="Learn more about this checkpoint">
-            {expanded ? 'Hide' : 'Info'}
+          <button className="help-btn" onClick={() => onToggleExpanded('info')} title="Learn more about this checkpoint">
+            {expanded && expandedMode === 'info' ? 'Hide' : 'Info'}
           </button>
         )}
         {isStudent && (
-          <button className="help-btn always-visible" onClick={onToggleExpanded} title="Learn what this means">
-            {expanded ? 'Hide' : 'Guide'}
+          <button className="help-btn always-visible" onClick={() => onToggleExpanded('info')} title="Learn what this means">
+            {expanded && expandedMode === 'info' ? 'Hide' : 'Guide'}
           </button>
         )}
         {showLog && (
           <button className="log-btn primary" onClick={onLog} title="Log completion">Log</button>
+        )}
+        {showAutomatedHint && (
+          <button
+            className="log-btn auto-hint"
+            onClick={category === 'scannable' ? onVerifyDataset : onDraftCheckpoints}
+            title={category === 'scannable' ? 'Run Verify Dataset to auto-complete' : 'Use Draft Checkpoints to draft an answer'}
+          >
+            {category === 'scannable' ? 'Auto-verify' : 'Auto-draft'}
+          </button>
         )}
         {showCompletedActions && (
           <>
@@ -89,7 +117,7 @@ function CheckpointItem({ checkpoint, role, saving, expanded, decisions, project
           </span>
         )}
       </div>
-      {expanded && (
+      {expanded && expandedMode === 'info' && (
         <div className="checkpoint-expanded">
           {checkpoint.what && (
             <div className="checkpoint-help">
@@ -99,6 +127,10 @@ function CheckpointItem({ checkpoint, role, saving, expanded, decisions, project
             </div>
           )}
           <AuditTrail decisions={decisions} />
+        </div>
+      )}
+      {expanded && expandedMode === 'discussion' && (
+        <div className="checkpoint-expanded checkpoint-expanded-discussion">
           <CheckpointComments projectId={projectId} checkpointId={checkpoint.id} />
         </div>
       )}

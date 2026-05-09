@@ -4,7 +4,7 @@ from .views.auth import register, login_view, logout_view, me
 from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create, quick_add_parse, grading_prompt_view, smart_defaults_view, activity_library, activity_library_detail
 from .views.tools import ai_tool_list_create, ai_tool_update, ai_tool_detail, tool_insights
 from .views.dashboard import dashboard_stats
-from .views.comments import checkpoint_comments
+from .views.comments import checkpoint_comments, checkpoint_comment_resolve
 from .views.ethics import ethics_start, ethics_node, ethics_evaluate, ethics_scenarios
 from .views.templates import template_list, template_detail, document_generate
 from .views.assessment import assessment_questions, assessment_submit
@@ -44,6 +44,8 @@ urlpatterns = [
     # Checkpoint Comment endpoints
     path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>/comments',
          checkpoint_comments, name='checkpoint-comments'),
+    path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>/comments/<int:comment_id>/resolve',
+         checkpoint_comment_resolve, name='checkpoint-comment-resolve'),
 
     # Consent endpoints
     path('research/consent', submit_consent, name='submit-consent'),
