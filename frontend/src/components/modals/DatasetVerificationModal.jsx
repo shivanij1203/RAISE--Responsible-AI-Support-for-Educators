@@ -407,11 +407,12 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
           <div className="dv-redact-panel">
             <div className="dv-redact-header">
               <div>
-                <div className="dv-redact-title">Set up Blind Grading</div>
+                <div className="dv-redact-title">Anonymous Grading Mode</div>
                 <div className="dv-redact-sub">
-                  Replace names, emails, and IDs with anonymous codes (<code>STUDENT-001</code>, <code>STUDENT-002</code>...).
-                  RAISE downloads two files: the anonymous version for the AI tool, and a private name key
-                  so you can match grades back to students after grading.
+                  Student names never reach the AI. RAISE replaces every name, email, and ID with
+                  a stable code (<code>STUDENT-001</code>, <code>STUDENT-002</code>...) and gives you
+                  back two files: the anonymized submissions for the grader, and a private name key
+                  that stays with you so you can match grades back after grading is done.
                 </div>
               </div>
               <button className="btn-primary" onClick={handleBlindGrade} disabled={blinding}>
@@ -421,7 +422,7 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
             {blindSummary && (
               <div className="dv-redact-summary">
                 Coded {blindSummary.rowsCoded} row(s) as {blindSummary.codeRange}.
-                Anonymous file is for the AI. Name key is private — keep it where only you can see it.
+                Anonymized file is for the AI tool. Name key is private; keep it somewhere only you can access.
               </div>
             )}
           </div>
