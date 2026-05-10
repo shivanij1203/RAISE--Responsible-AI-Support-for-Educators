@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toggleCheckpoint, logDecision, fetchTools, deleteProject } from '../services/api';
+import { toggleCheckpoint, logDecision, fetchTools, deleteProject, updateProject } from '../services/api';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
 import LogDecisionModal from './modals/LogDecisionModal';
@@ -7,6 +7,7 @@ import DatasetVerificationModal from './modals/DatasetVerificationModal';
 import SmartDefaultsModal from './modals/SmartDefaultsModal';
 import DisclosureModal from './modals/DisclosureModal';
 import EditActivityModal from './modals/EditActivityModal';
+import InviteCollaboratorModal from './modals/InviteCollaboratorModal';
 import DashboardHeader from './dashboard/DashboardHeader';
 import ProgressOverview from './dashboard/ProgressOverview';
 import CheckpointItem from './dashboard/CheckpointItem';
@@ -41,7 +42,20 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
   }
   const [showDisclosure, setShowDisclosure] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [availableTools, setAvailableTools] = useState([]);
+
+  async function handleToggleShareAsExample(nextShared) {
+    try {
+      const updated = await updateProject(project.id, { share_as_example: nextShared });
+      setProject(updated);
+      if (onProjectUpdated) onProjectUpdated(updated);
+      showToast(nextShared ? 'Shared in Use Cases library' : 'Made private');
+    } catch (err) {
+      console.error('Failed to update share flag', err);
+      showToast('Could not update sharing');
+    }
+  }
 
   useEffect(() => {
     fetchTools().then(setAvailableTools).catch(() => {});
@@ -167,6 +181,8 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
           onDelete={() => setShowDeleteConfirm(true)}
           onDisclosure={() => setShowDisclosure(true)}
           onExport={handleExportReport}
+          onInvite={() => setShowInviteModal(true)}
+          onToggleShareAsExample={handleToggleShareAsExample}
           isOwner={isOwner}
         />
 
@@ -290,6 +306,14 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
               setShowEditModal(false);
               showToast('Activity updated');
             }}
+          />
+        )}
+
+        {showInviteModal && (
+          <InviteCollaboratorModal
+            project={project}
+            onClose={() => setShowInviteModal(false)}
+            onInvited={() => showToast('Invitation sent')}
           />
         )}
 

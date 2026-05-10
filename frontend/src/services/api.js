@@ -337,3 +337,33 @@ export async function markAllNotificationsRead() {
   return res.data;
 }
 
+// Collaboration invitations
+export async function sendInvitation(projectId, email, role, note = '') {
+  const res = await api.post(`/projects/${projectId}/invitations`, { email, role, note });
+  return res.data;
+}
+
+export async function fetchProjectInvitations(projectId) {
+  const res = await api.get(`/projects/${projectId}/invitations/list`);
+  return res.data;
+}
+
+export async function fetchPendingInvitations() {
+  const res = await api.get('/invitations/pending');
+  return res.data;
+}
+
+export async function acceptInvitation(invitationId) {
+  const res = await api.post(`/invitations/${invitationId}/accept`);
+  return res.data;
+}
+
+export async function declineInvitation(invitationId) {
+  const res = await api.post(`/invitations/${invitationId}/decline`);
+  return res.data;
+}
+
+export async function cancelInvitation(invitationId) {
+  await api.delete(`/invitations/${invitationId}`);
+}
+

@@ -4,6 +4,7 @@ from .project import Project, Checkpoint, Decision
 from .tools import AITool
 from .comments import CheckpointComment
 from .notification import Notification
+from .invitation import Invitation
 
 __all__ = [
     'UserProfile',
@@ -16,4 +17,5 @@ __all__ = [
     'AITool',
     'CheckpointComment',
     'Notification',
+    'Invitation',
 ]

@@ -22,7 +22,16 @@ function TrashIcon() {
   );
 }
 
-function DashboardHeader({ project, onEdit, onDelete, onDisclosure, onExport, isOwner }) {
+function DashboardHeader({
+  project,
+  onEdit,
+  onDelete,
+  onDisclosure,
+  onExport,
+  onInvite,
+  onToggleShareAsExample,
+  isOwner,
+}) {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const roles = [...new Set(project.checkpoints?.map(c => c.assignedTo) || [])];
   const hasMultipleRoles = roles.length > 1;
@@ -32,6 +41,14 @@ function DashboardHeader({ project, onEdit, onDelete, onDisclosure, onExport, is
     day: 'numeric',
     year: 'numeric',
   });
+
+  const collaboratorChips = [];
+  if (project.facultyAdvisor) {
+    collaboratorChips.push({ key: 'advisor', label: `Faculty advisor: ${project.facultyAdvisor.name || project.facultyAdvisor.email}` });
+  }
+  if (project.studentCollaborator) {
+    collaboratorChips.push({ key: 'student', label: `Student: ${project.studentCollaborator.name || project.studentCollaborator.email}` });
+  }
 
   return (
     <header className="pd-header">
@@ -55,8 +72,37 @@ function DashboardHeader({ project, onEdit, onDelete, onDisclosure, onExport, is
           <span>Started {startedDate}</span>
         </div>
         {project.description && <p className="pd-description">{project.description}</p>}
+        {collaboratorChips.length > 0 && (
+          <div className="pd-collab-row">
+            {collaboratorChips.map((chip) => (
+              <span key={chip.key} className="pd-collab-chip">{chip.label}</span>
+            ))}
+          </div>
+        )}
+        {isOwner && onToggleShareAsExample && (
+          <label className="pd-share-toggle">
+            <input
+              type="checkbox"
+              checked={!!project.shareAsExample}
+              onChange={(e) => onToggleShareAsExample(e.target.checked)}
+            />
+            <span className="pd-share-toggle-text">
+              Share as institutional example
+              <em>
+                {' '}— {project.shareAsExample
+                  ? 'visible (anonymized) in the Use Cases library.'
+                  : 'private to you and your collaborators.'}
+              </em>
+            </span>
+          </label>
+        )}
       </div>
       <div className="pd-header-actions">
+        {isOwner && onInvite && (
+          <button className="pd-disclosure-btn" onClick={onInvite} title="Invite a collaborator">
+            Invite collaborator
+          </button>
+        )}
         <button className="pd-disclosure-btn" onClick={onDisclosure} title="Generate AI use disclosure">Disclosure</button>
         {hasMultipleRoles ? (
           <div className="export-dropdown-wrap">

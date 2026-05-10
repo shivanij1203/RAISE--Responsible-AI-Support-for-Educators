@@ -3,6 +3,7 @@ import { fetchProjects, updateProject } from '../services/api';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
 import QuickAddActivityModal from './modals/QuickAddActivityModal';
+import PendingInvitationsBanner from './PendingInvitationsBanner';
 
 function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, onViewToolRegistry, onViewUseCases, templateSeed, onTemplateConsumed }) {
   const [projects, setProjects] = useState([]);
@@ -112,6 +113,8 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
           <button className="error-retry" onClick={loadProjects}>Retry</button>
         </div>
       )}
+
+      <PendingInvitationsBanner onAccepted={loadProjects} />
 
       <div className="pl-intro">
         <h2 className="pl-intro-title">My Activities</h2>

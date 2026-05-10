@@ -12,6 +12,14 @@ from .views.research import submit_consent, start_session, record_response, comp
 from .views.export import project_export
 from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns, redact_pii_in_file, extract_pdf_text, blind_grade_csv
 from .views.notifications import notification_list, notification_mark_read, notification_mark_all_read
+from .views.invitations import (
+    project_invitations_create,
+    project_invitations_list,
+    my_pending_invitations,
+    invitation_accept,
+    invitation_decline,
+    invitation_cancel,
+)
 
 urlpatterns = [
     # Auth endpoints
@@ -88,4 +96,12 @@ urlpatterns = [
     path('notifications', notification_list, name='notification-list'),
     path('notifications/read-all', notification_mark_all_read, name='notification-mark-all-read'),
     path('notifications/<int:notification_id>/read', notification_mark_read, name='notification-mark-read'),
+
+    # Collaboration invitation endpoints
+    path('projects/<int:project_id>/invitations', project_invitations_create, name='project-invitations-create'),
+    path('projects/<int:project_id>/invitations/list', project_invitations_list, name='project-invitations-list'),
+    path('invitations/pending', my_pending_invitations, name='invitations-pending'),
+    path('invitations/<int:invitation_id>/accept', invitation_accept, name='invitation-accept'),
+    path('invitations/<int:invitation_id>/decline', invitation_decline, name='invitation-decline'),
+    path('invitations/<int:invitation_id>', invitation_cancel, name='invitation-cancel'),
 ]

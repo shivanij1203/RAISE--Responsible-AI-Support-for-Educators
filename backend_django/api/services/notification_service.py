@@ -107,3 +107,47 @@ def notify_verification_run(
         checkpoint=checkpoint,
         message=message,
     )
+
+
+def notify_invite_received(invitation) -> Notification | None:
+    """Send a notification to the invitee when an invite is created.
+
+    Only fires when the invitee already has an account (to_user is set).
+    """
+    if not invitation.to_user_id:
+        return None
+    role_label = (
+        'faculty advisor' if invitation.role == 'faculty_advisor' else 'student collaborator'
+    )
+    message = (
+        f"{_display_name(invitation.from_user)} invited you to join "
+        f"'{invitation.project.name}' as {role_label}."
+    )
+    return Notification.objects.create(
+        recipient=invitation.to_user,
+        actor=invitation.from_user,
+        verb=Notification.VERB_INVITE_RECEIVED,
+        project=invitation.project,
+        checkpoint=None,
+        message=message,
+    )
+
+
+def notify_invite_responded(invitation) -> Notification:
+    """Send a notification back to the original sender when invitee accepts/declines."""
+    if invitation.status == 'accepted':
+        verb = Notification.VERB_INVITE_ACCEPTED
+        verb_text = 'accepted'
+    else:
+        verb = Notification.VERB_INVITE_DECLINED
+        verb_text = 'declined'
+    actor_name = invitation.to_user.first_name or invitation.to_email if invitation.to_user else invitation.to_email
+    message = f"{actor_name} {verb_text} your invite to '{invitation.project.name}'."
+    return Notification.objects.create(
+        recipient=invitation.from_user,
+        actor=invitation.to_user,
+        verb=verb,
+        project=invitation.project,
+        checkpoint=None,
+        message=message,
+    )

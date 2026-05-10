@@ -10,10 +10,16 @@ class Notification(models.Model):
     VERB_CHECKPOINT_COMPLETED = 'checkpoint_completed'
     VERB_COMMENT_ADDED = 'comment_added'
     VERB_VERIFICATION_RUN = 'verification_run'
+    VERB_INVITE_RECEIVED = 'invite_received'
+    VERB_INVITE_ACCEPTED = 'invite_accepted'
+    VERB_INVITE_DECLINED = 'invite_declined'
     VERB_CHOICES = [
         (VERB_CHECKPOINT_COMPLETED, 'Checkpoint completed'),
         (VERB_COMMENT_ADDED, 'Comment added'),
         (VERB_VERIFICATION_RUN, 'Verification run'),
+        (VERB_INVITE_RECEIVED, 'Collaboration invite received'),
+        (VERB_INVITE_ACCEPTED, 'Collaboration invite accepted'),
+        (VERB_INVITE_DECLINED, 'Collaboration invite declined'),
     ]
 
     recipient = models.ForeignKey(
