@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views.auth import register, login_view, logout_view, me
+from .views.health import health
 from .views.projects import project_list_create, project_detail, checkpoint_toggle, decision_create, quick_add_parse, grading_prompt_view, smart_defaults_view, activity_library, activity_library_detail
 from .views.tools import ai_tool_list_create, ai_tool_update, ai_tool_detail, tool_insights
 from .views.dashboard import dashboard_stats
@@ -22,6 +23,9 @@ from .views.invitations import (
 )
 
 urlpatterns = [
+    # Health check (no auth) for uptime monitors and keep-warm pings
+    path('health', health, name='health'),
+
     # Auth endpoints
     path('auth/register', register, name='register'),
     path('auth/login', login_view, name='login'),
