@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'api',
 ]
@@ -161,6 +162,10 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Token auth is primary: the frontend and backend are on different
+        # domains (Vercel + Render), so cross-site session cookies are
+        # unreliable. A token sent in the Authorization header is not.
+        'rest_framework.authentication.TokenAuthentication',
         'api.authentication.CsrfExemptSessionAuthentication',
     ],
 }

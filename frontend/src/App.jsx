@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getMe } from './services/api';
 import Landing from './components/Landing';
 import Login from './components/Login';
 import ProjectList from './components/ProjectList';
@@ -23,15 +24,43 @@ function App() {
   const [templateSeed, setTemplateSeed] = useState(null);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('raise_user');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setCurrentUser(user);
-      setUserRole(mapRole(user.role));
-      setCurrentView('projects');
-    } else {
-      setCurrentView('landing');
+    let cancelled = false;
+
+    async function bootstrap() {
+      const savedUser = localStorage.getItem('raise_user');
+      const savedToken = localStorage.getItem('raise_token');
+
+      if (!savedUser || !savedToken) {
+        if (!cancelled) setCurrentView('landing');
+        return;
+      }
+
+      // Validate the stored session with the backend. Stored credentials
+      // alone are not proof of a live session, so confirm before showing
+      // the authenticated app — otherwise the user lands in a broken UI.
+      try {
+        const me = await getMe();
+        if (cancelled) return;
+        const user = {
+          id: me.id,
+          email: me.email,
+          full_name: me.full_name,
+          role: me.role,
+        };
+        localStorage.setItem('raise_user', JSON.stringify(user));
+        setCurrentUser(user);
+        setUserRole(mapRole(user.role));
+        setCurrentView('projects');
+      } catch {
+        if (cancelled) return;
+        localStorage.removeItem('raise_user');
+        localStorage.removeItem('raise_token');
+        setCurrentView('landing');
+      }
     }
+
+    bootstrap();
+    return () => { cancelled = true; };
   }, []);
 
   function handleLogin(user) {
@@ -43,7 +72,7 @@ function App() {
 
   function handleLogout() {
     localStorage.removeItem('raise_user');
-    setCurrentView('landing');
+    localStorage.removeItem('raise_token');
     setCurrentUser(null);
     setUserRole(null);
     setCurrentView('login');

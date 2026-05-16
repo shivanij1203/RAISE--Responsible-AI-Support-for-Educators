@@ -77,6 +77,49 @@ class LoginViewTest(TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+    def test_login_returns_token(self) -> None:
+        """Login must return an auth token for header-based requests."""
+        response = self.client.post(
+            '/api/auth/login',
+            data={'email': 'login@usf.edu', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json().get('token'))
+
+
+class TokenAuthTest(TestCase):
+    """The auth token alone must authenticate API requests (no cookie)."""
+
+    def setUp(self) -> None:
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='token@usf.edu',
+            email='token@usf.edu',
+            password='testpass123',
+            first_name='Token User',
+        )
+        UserProfile.objects.create(user=self.user, role='faculty')
+
+    def test_token_authenticates_request(self) -> None:
+        login = self.client.post(
+            '/api/auth/login',
+            data={'email': 'token@usf.edu', 'password': 'testpass123'},
+            content_type='application/json',
+        )
+        token = login.json()['token']
+
+        # A fresh client with no session cookie, token in the header only.
+        fresh = Client()
+        response = fresh.get('/api/auth/me', HTTP_AUTHORIZATION=f'Token {token}')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['email'], 'token@usf.edu')
+
+    def test_invalid_token_rejected(self) -> None:
+        fresh = Client()
+        response = fresh.get('/api/auth/me', HTTP_AUTHORIZATION='Token notarealtoken')
+        self.assertEqual(response.status_code, 401)
+
 
 class MeViewTest(TestCase):
     """Tests for the /api/auth/me endpoint."""

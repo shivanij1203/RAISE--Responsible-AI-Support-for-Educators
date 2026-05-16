@@ -1,24 +1,65 @@
 import axios from 'axios';
 
+const TOKEN_KEY = 'raise_token';
+const USER_KEY = 'raise_user';
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,
 });
 
+// Attach the auth token to every request. The frontend (Vercel) and backend
+// (Render) are on different domains, so session cookies are unreliable;
+// a token in the Authorization header works in every browser.
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    config.headers.Authorization = `Token ${token}`;
+  }
+  return config;
+});
+
+// A 401 on any non-auth endpoint means the stored credentials are stale.
+// Clear them and reload to a clean state instead of a half-broken UI.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/');
+    if (status === 401 && !isAuthEndpoint) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      window.location.reload();
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 export async function registerUser(email, password, fullName, role) {
   const res = await api.post('/auth/register', { email, password, full_name: fullName, role });
+  if (res.data?.token) {
+    localStorage.setItem(TOKEN_KEY, res.data.token);
+  }
   return res.data;
 }
 
 export async function loginUser(email, password) {
   const res = await api.post('/auth/login', { email, password });
+  if (res.data?.token) {
+    localStorage.setItem(TOKEN_KEY, res.data.token);
+  }
   return res.data;
 }
 
 export async function logoutUser() {
-  const res = await api.post('/auth/logout');
-  return res.data;
+  try {
+    const res = await api.post('/auth/logout');
+    return res.data;
+  } finally {
+    localStorage.removeItem(TOKEN_KEY);
+  }
 }
 
 export async function getMe() {

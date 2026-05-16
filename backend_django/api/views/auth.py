@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
@@ -56,8 +57,11 @@ def register(request: Request) -> Response:
     )
     UserProfile.objects.create(user=user, role=role)
 
+    token, _ = Token.objects.get_or_create(user=user)
+
     return Response({
         "message": "Account created",
+        "token": token.key,
         "user": {
             "id": user.id,
             "email": user.email,
@@ -98,9 +102,11 @@ def login_view(request: Request) -> Response:
     profile, _ = UserProfile.objects.get_or_create(
         user=user, defaults={'role': 'student'}
     )
+    token, _ = Token.objects.get_or_create(user=user)
 
     return Response({
         "message": "Logged in",
+        "token": token.key,
         "user": {
             "id": user.id,
             "email": user.email,
@@ -112,7 +118,9 @@ def login_view(request: Request) -> Response:
 
 @api_view(['POST'])
 def logout_view(request: Request) -> Response:
-    """Logout."""
+    """Logout: revoke the auth token and clear the session."""
+    if request.user.is_authenticated:
+        Token.objects.filter(user=request.user).delete()
     logout(request)
     return Response({"message": "Logged out"})
 
