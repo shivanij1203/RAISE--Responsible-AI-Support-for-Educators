@@ -14,6 +14,7 @@ from api.serializers import (
     DecisionCreateResponseSerializer,
 )
 from api.services import notification_service
+from api.services import audit_service
 from api.services.checkpoint_generator import generate_checkpoints_for_use_case
 from api.services.quick_add_parser import parse_activity_description
 from api.services.grading_prompt_generator import generate_grading_prompt
@@ -95,6 +96,8 @@ def project_list_create(request: Request) -> Response:
         tools = AITool.objects.filter(id__in=ai_tool_ids)
         project.ai_tools.set(tools)
 
+    audit_service.record_activity_created(project, actor=request.user)
+
     return Response(serialize_project(project), status=status.HTTP_201_CREATED)
 
 
@@ -122,6 +125,15 @@ def project_detail(request: Request, project_id: int) -> Response:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     if request.method == 'PUT':
+        # Snapshot mutable fields so we can log exactly what changed.
+        original = {
+            'name': project.name,
+            'description': project.description,
+            'share_as_example': project.share_as_example,
+            'faculty_advisor_id': project.faculty_advisor_id,
+            'student_collaborator_id': project.student_collaborator_id,
+        }
+
         # Only owner can edit name/description and share-as-example flag
         if project.user == request.user:
             if 'name' in request.data:
@@ -170,6 +182,27 @@ def project_detail(request: Request, project_id: int) -> Response:
                     cp.delete()
 
         project.save()
+
+        # Log what changed. Share-as-example gets its own event type; the
+        # other editable fields collapse into a single "activity updated".
+        changed_fields: list[str] = []
+        if project.name != original['name']:
+            changed_fields.append('name')
+        if project.description != original['description']:
+            changed_fields.append('description')
+        if project.faculty_advisor_id != original['faculty_advisor_id']:
+            changed_fields.append('faculty advisor')
+        if project.student_collaborator_id != original['student_collaborator_id']:
+            changed_fields.append('student collaborator')
+        if changed_fields:
+            audit_service.record_activity_updated(
+                project, actor=request.user, changed_fields=changed_fields,
+            )
+        if project.share_as_example != original['share_as_example']:
+            audit_service.record_share_toggled(
+                project, actor=request.user, shared=project.share_as_example,
+            )
+
         return Response(serialize_project(project))
 
     return Response(serialize_project(project))
@@ -200,6 +233,9 @@ def checkpoint_toggle(request: Request, project_id: int, checkpoint_id: str) -> 
 
     if checkpoint.completed:
         notification_service.notify_checkpoint_completed(checkpoint, actor=request.user)
+        audit_service.record_checkpoint_completed(checkpoint, actor=request.user)
+    else:
+        audit_service.record_checkpoint_reopened(checkpoint, actor=request.user)
 
     return Response(CheckpointToggleResponseSerializer(checkpoint).data)
 
@@ -251,6 +287,8 @@ def decision_create(request: Request, project_id: int) -> Response:
         tool_used=tool_used,
     )
 
+    audit_service.record_decision_logged(decision, actor=request.user)
+
     # Auto-complete the checkpoint if not already
     if not checkpoint.completed:
         checkpoint.completed = True
@@ -258,6 +296,7 @@ def decision_create(request: Request, project_id: int) -> Response:
         checkpoint.save()
         decision.refresh_from_db(fields=['checkpoint'])
         notification_service.notify_checkpoint_completed(checkpoint, actor=request.user)
+        audit_service.record_checkpoint_completed(checkpoint, actor=request.user)
 
     return Response(
         DecisionCreateResponseSerializer(decision).data,

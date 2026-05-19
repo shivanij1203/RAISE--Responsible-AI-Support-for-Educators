@@ -5,6 +5,7 @@ from .tools import AITool
 from .comments import CheckpointComment
 from .notification import Notification
 from .invitation import Invitation
+from .activity_event import ActivityEvent
 
 __all__ = [
     'UserProfile',
@@ -18,4 +19,5 @@ __all__ = [
     'CheckpointComment',
     'Notification',
     'Invitation',
+    'ActivityEvent',
 ]

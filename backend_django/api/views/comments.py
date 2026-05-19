@@ -7,6 +7,7 @@ from rest_framework import status
 from api.models import Project, Checkpoint, CheckpointComment
 from api.serializers import CheckpointCommentSerializer
 from api.services import notification_service
+from api.services import audit_service
 
 
 @api_view(['GET', 'POST'])
@@ -40,6 +41,7 @@ def checkpoint_comments(request: Request, project_id: int, checkpoint_id: str) -
         text=text,
     )
     notification_service.notify_comment_added(comment)
+    audit_service.record_comment_added(comment)
     return Response(
         CheckpointCommentSerializer(comment).data,
         status=status.HTTP_201_CREATED,
@@ -80,4 +82,7 @@ def checkpoint_comment_resolve(request: Request, project_id: int, checkpoint_id:
         comment.resolved_at = None
         comment.resolved_by = None
     comment.save()
+    audit_service.record_comment_resolved(
+        comment, actor=request.user, resolved=new_state,
+    )
     return Response(CheckpointCommentSerializer(comment).data)

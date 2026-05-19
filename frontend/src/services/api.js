@@ -121,6 +121,12 @@ export async function exportProjectCSV(projectId) {
   return res.data;
 }
 
+// Activity audit log / timeline
+export async function fetchActivityTimeline(projectId) {
+  const res = await api.get(`/projects/${projectId}/timeline`);
+  return res.data;
+}
+
 // AI Tool Registry
 export async function fetchTools(params = {}) {
   const query = new URLSearchParams(params).toString();
@@ -253,6 +259,27 @@ export async function blindGradeCsv(file) {
   const formData = new FormData();
   formData.append('file', file);
   const res = await api.post('/verify/blind-grade-csv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function mergeGradedGrades(gradedFile, keyFile) {
+  const formData = new FormData();
+  formData.append('graded_file', gradedFile);
+  formData.append('key_file', keyFile);
+  const res = await api.post('/verify/merge-grades', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return res.data;
+}
+
+export async function anonymizeDocuments({ archive, files = [], roster = '' }) {
+  const formData = new FormData();
+  if (archive) formData.append('archive', archive);
+  files.forEach((f) => formData.append('files', f));
+  if (roster) formData.append('roster', roster);
+  const res = await api.post('/verify/anonymize-documents', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return res.data;

@@ -9,6 +9,7 @@ import {
   generateGradingPrompt,
   extractPdfText,
   blindGradeCsv,
+  mergeGradedGrades,
 } from '../../services/api';
 
 const PII_CHECKPOINT = 'data_deidentified';
@@ -142,6 +143,10 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
   const [redactSummary, setRedactSummary] = useState(null);
   const [blinding, setBlinding] = useState(false);
   const [blindSummary, setBlindSummary] = useState(null);
+  const [gradedFile, setGradedFile] = useState(null);
+  const [keyFile, setKeyFile] = useState(null);
+  const [merging, setMerging] = useState(false);
+  const [mergeSummary, setMergeSummary] = useState(null);
 
   const isGrading = (project.aiUseCase || '').toLowerCase() === 'grading';
   const defaultTool = (project.aiTools && project.aiTools[0]?.name) || '';
@@ -239,6 +244,21 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
       setGlobalError('Could not set up blind grading. Try again.');
     } finally {
       setBlinding(false);
+    }
+  }
+
+  async function handleMergeGrades() {
+    if (!gradedFile || !keyFile) return;
+    setMerging(true);
+    setGlobalError('');
+    try {
+      const result = await mergeGradedGrades(gradedFile, keyFile);
+      downloadCsv(result.content, 'graded_with_names.csv');
+      setMergeSummary(result.summary);
+    } catch (err) {
+      setGlobalError(err.response?.data?.error || 'Could not merge the files. Try again.');
+    } finally {
+      setMerging(false);
     }
   }
 
@@ -403,7 +423,7 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
           />
         </div>
 
-        {file && piiState.status === 'done' && piiState.summary && !piiState.summary.passed && isGrading && (
+        {file && isGrading && (
           <div className="dv-redact-panel">
             <div className="dv-redact-header">
               <div>
@@ -421,8 +441,13 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
             </div>
             {blindSummary && (
               <div className="dv-redact-summary">
-                Coded {blindSummary.rowsCoded} row(s) as {blindSummary.codeRange}.
-                Anonymized file is for the AI tool. Name key is private; keep it somewhere only you can access.
+                {blindSummary.identityFieldsFound
+                  ? `Coded ${blindSummary.rowsCoded} row(s) as ${blindSummary.codeRange}. `
+                    + 'The anonymized file is for the AI tool. The name key is private — '
+                    + 'keep it somewhere only you can access.'
+                  : 'No name, email, or ID columns were detected, so there was nothing to '
+                    + 'anonymize. The downloaded file is unchanged — check that your roster '
+                    + 'includes an identity column.'}
               </div>
             )}
           </div>
@@ -513,6 +538,63 @@ function DatasetVerificationModal({ project, onClose, onCheckpointApplied }) {
                 <div className="dv-prompt-includes">
                   Built-in guardrails: {gradingPrompt.includes.join(', ')}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {isGrading && (
+          <div className="dv-redact-panel">
+            <div className="dv-redact-header">
+              <div>
+                <div className="dv-redact-title">Re-attach grades to students</div>
+                <div className="dv-redact-sub">
+                  After the AI grades the anonymized file, upload it here with your private
+                  name key. RAISE matches each grade back to the right student by code and
+                  gives you one merged CSV with real names. The name key never leaves this step.
+                </div>
+              </div>
+            </div>
+            <div className="dv-merge-inputs">
+              <label className="dv-rubric-upload-btn">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    setGradedFile(e.target.files?.[0] || null);
+                    e.target.value = '';
+                  }}
+                />
+                <span>{gradedFile ? `Graded: ${gradedFile.name}` : 'Upload graded CSV'}</span>
+              </label>
+              <label className="dv-rubric-upload-btn">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    setKeyFile(e.target.files?.[0] || null);
+                    e.target.value = '';
+                  }}
+                />
+                <span>{keyFile ? `Name key: ${keyFile.name}` : 'Upload name key CSV'}</span>
+              </label>
+              <button
+                className="btn-primary"
+                onClick={handleMergeGrades}
+                disabled={!gradedFile || !keyFile || merging}
+              >
+                {merging ? 'Merging...' : 'Merge and download'}
+              </button>
+            </div>
+            {mergeSummary && (
+              <div className="dv-redact-summary">
+                Merged {mergeSummary.matchedRows} graded row(s) back to students.
+                {mergeSummary.unmatchedRows > 0
+                  ? ` ${mergeSummary.unmatchedRows} row(s) had codes not in the name key — review those.`
+                  : ''}
+                {mergeSummary.missingFromGraded > 0
+                  ? ` ${mergeSummary.missingFromGraded} student(s) in the key had no grade.`
+                  : ''}
               </div>
             )}
           </div>

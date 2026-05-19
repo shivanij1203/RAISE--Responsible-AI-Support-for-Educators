@@ -3,6 +3,10 @@
 Provides file-based scanning for PII detection, FERPA compliance checks,
 and keyword-based data classification suggestions.
 """
+import base64
+import re
+import zipfile
+
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.request import Request
@@ -11,10 +15,17 @@ from rest_framework import status
 
 from api.models import Project, Checkpoint
 from api.services import notification_service
+from api.services import audit_service
 from api.services.pii_scanner import scan_csv_for_pii, classify_data_from_description
 from api.services.pii_redactor import redact_csv, pseudonymize_csv
+from api.services.grade_merger import merge_graded_with_key
+from api.services.document_anonymizer import anonymize_submissions, read_archive
 from api.services.pdf_text_extractor import extract_text_from_pdf
 from api.services.bias_auditor import audit_bias, get_csv_columns
+
+# Limits for the document anonymizer batch endpoint.
+MAX_TOTAL_DOC_UPLOAD = 50 * 1024 * 1024
+MAX_DOC_COUNT = 300
 
 
 def _maybe_notify_verification(
@@ -22,7 +33,8 @@ def _maybe_notify_verification(
     scan_type: str,
     verdict: str,
 ) -> None:
-    """If the request includes project_id + checkpoint_id, fire a notification."""
+    """If the request includes project_id + checkpoint_id, fire a notification
+    and append a verification event to the activity audit log."""
     project_id = request.data.get('project_id')
     checkpoint_id = request.data.get('checkpoint_id')
     if not project_id or not checkpoint_id:
@@ -33,6 +45,9 @@ def _maybe_notify_verification(
     except (Project.DoesNotExist, Checkpoint.DoesNotExist, ValueError):
         return
     notification_service.notify_verification_run(
+        checkpoint, actor=request.user, scan_type=scan_type, verdict=verdict,
+    )
+    audit_service.record_verification_run(
         checkpoint, actor=request.user, scan_type=scan_type, verdict=verdict,
     )
 
@@ -266,3 +281,116 @@ def extract_pdf_text(request: Request) -> Response:
 
     result = extract_text_from_pdf(uploaded_file.read())
     return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def merge_graded_grades(request: Request) -> Response:
+    """Re-attach grades to students.
+
+    Takes the graded anonymous CSV plus the private name key and joins them on
+    the per-row submission code, returning a single merged CSV with real names.
+    """
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    graded_file = request.FILES.get('graded_file')
+    key_file = request.FILES.get('key_file')
+    if not graded_file or not key_file:
+        return Response(
+            {"error": "Both the graded CSV and the name key CSV are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    decoded: dict[str, str] = {}
+    for label, uploaded in (('graded', graded_file), ('key', key_file)):
+        if not uploaded.name.lower().endswith('.csv'):
+            return Response(
+                {"error": f"The {label} file must be a CSV."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if uploaded.size > 10 * 1024 * 1024:
+            return Response(
+                {"error": f"The {label} file is too large. Maximum size is 10MB."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            # utf-8-sig tolerates the BOM that Excel adds when re-saving a CSV.
+            decoded[label] = uploaded.read().decode('utf-8-sig')
+        except UnicodeDecodeError:
+            return Response(
+                {"error": f"Could not read the {label} file. Please ensure it is a valid UTF-8 CSV."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    try:
+        result = merge_graded_with_key(decoded['graded'], decoded['key'])
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(result)
+
+
+@api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
+def anonymize_documents(request: Request) -> Response:
+    """Anonymize a batch of student document submissions.
+
+    Accepts a ZIP archive (field 'archive') and/or individual files (field
+    'files'), plus an optional roster (field 'roster' — student names separated
+    by commas or newlines). Returns the anonymized ZIP as base64 plus a private
+    name-key CSV mapping each code back to its original filename.
+    """
+    if not request.user.is_authenticated:
+        return Response({"error": "Not logged in"}, status=status.HTTP_401_UNAUTHORIZED)
+
+    collected: list[tuple[str, bytes]] = []
+
+    archive = request.FILES.get('archive')
+    if archive:
+        if not archive.name.lower().endswith('.zip'):
+            return Response(
+                {"error": "The archive must be a .zip file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            collected.extend(read_archive(archive.read()))
+        except zipfile.BadZipFile:
+            return Response(
+                {"error": "Could not open the ZIP file. It may be corrupt."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    for uploaded in request.FILES.getlist('files'):
+        collected.append((uploaded.name, uploaded.read()))
+
+    if not collected:
+        return Response(
+            {"error": "Upload a ZIP archive or one or more document files."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if len(collected) > MAX_DOC_COUNT:
+        return Response(
+            {"error": f"Too many documents ({len(collected)}). Maximum is {MAX_DOC_COUNT}."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    total_size = sum(len(data) for _, data in collected)
+    if total_size > MAX_TOTAL_DOC_UPLOAD:
+        return Response(
+            {"error": "Documents are too large. Maximum total size is 50MB."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    roster_raw = request.data.get('roster', '') or ''
+    roster_names = re.split(r'[\r\n,]+', roster_raw)
+
+    try:
+        result = anonymize_submissions(collected, roster_names)
+    except ValueError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({
+        'anonymizedZipBase64': base64.b64encode(result['zip_bytes']).decode('ascii'),
+        'nameKeyCsv': result['name_key_csv'],
+        'summary': result['summary'],
+    })

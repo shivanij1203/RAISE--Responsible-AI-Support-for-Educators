@@ -11,7 +11,8 @@ from .views.templates import template_list, template_detail, document_generate
 from .views.assessment import assessment_questions, assessment_submit
 from .views.research import submit_consent, start_session, record_response, complete_session
 from .views.export import project_export
-from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns, redact_pii_in_file, extract_pdf_text, blind_grade_csv
+from .views.timeline import project_timeline
+from .views.verification import scan_file_for_pii, classify_data, bias_audit_view, get_file_columns, redact_pii_in_file, extract_pdf_text, blind_grade_csv, merge_graded_grades, anonymize_documents
 from .views.notifications import notification_list, notification_mark_read, notification_mark_all_read
 from .views.invitations import (
     project_invitations_create,
@@ -43,6 +44,7 @@ urlpatterns = [
     path('projects/<int:project_id>/checkpoints/<str:checkpoint_id>', checkpoint_toggle, name='checkpoint-toggle'),
     path('projects/<int:project_id>/decisions', decision_create, name='decision-create'),
     path('projects/<int:project_id>/export', project_export, name='project-export'),
+    path('projects/<int:project_id>/timeline', project_timeline, name='project-timeline'),
 
     # Dashboard endpoint
     path('dashboard/stats', dashboard_stats, name='dashboard-stats'),
@@ -91,6 +93,8 @@ urlpatterns = [
     path('verify/redact-pii', redact_pii_in_file, name='redact-pii'),
     path('verify/extract-pdf', extract_pdf_text, name='extract-pdf'),
     path('verify/blind-grade-csv', blind_grade_csv, name='blind-grade-csv'),
+    path('verify/merge-grades', merge_graded_grades, name='merge-grades'),
+    path('verify/anonymize-documents', anonymize_documents, name='anonymize-documents'),
 
     # Assessment endpoints
     path('assessment/questions', assessment_questions, name='assessment-questions'),

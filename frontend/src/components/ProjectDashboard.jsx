@@ -8,10 +8,12 @@ import SmartDefaultsModal from './modals/SmartDefaultsModal';
 import DisclosureModal from './modals/DisclosureModal';
 import EditActivityModal from './modals/EditActivityModal';
 import InviteCollaboratorModal from './modals/InviteCollaboratorModal';
+import DocumentAnonymizerModal from './modals/DocumentAnonymizerModal';
 import DashboardHeader from './dashboard/DashboardHeader';
 import ProgressOverview from './dashboard/ProgressOverview';
 import CheckpointItem from './dashboard/CheckpointItem';
 import WhatToDoNext from './dashboard/WhatToDoNext';
+import ActivityTimeline from './ActivityTimeline';
 import { getCompletionPercentage, getRiskAssessment } from '../utils/risk';
 import { generateDisclosure } from '../utils/disclosure';
 import { generateComplianceReport } from '../utils/complianceReport';
@@ -27,8 +29,11 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
   const [showSmartDefaults, setShowSmartDefaults] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState('tracker');
+  const [showDocAnonymizer, setShowDocAnonymizer] = useState(false);
 
   const isOwner = !!user?.email && project.ownerEmail === user.email;
+  const isGrading = (project.aiUseCase || '').toLowerCase() === 'grading';
 
   async function handleDeleteActivity() {
     setDeleting(true);
@@ -204,41 +209,63 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
         />
 
         <div className="dashboard-tabs dashboard-tabs-row">
-          <button className="tab active">Compliance Tracker</button>
-          <div className="pd-tab-actions">
-            <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowSmartDefaults(true)} data-tip="Draft answers for remaining checkpoints">Draft Checkpoints</button>
-            <button className="pd-tab-action tooltip-host" onClick={() => setShowDatasetVerify(true)} data-tip="Run all applicable checks on a dataset">Verify Dataset</button>
+          <div className="pd-tab-group">
+            <button
+              className={`tab ${activeTab === 'tracker' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tracker')}
+            >
+              Compliance Tracker
+            </button>
+            <button
+              className={`tab ${activeTab === 'log' ? 'active' : ''}`}
+              onClick={() => setActiveTab('log')}
+            >
+              Activity Log
+            </button>
           </div>
+          {activeTab === 'tracker' && (
+            <div className="pd-tab-actions">
+              <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowSmartDefaults(true)} data-tip="Draft answers for remaining checkpoints">Draft Checkpoints</button>
+              {isGrading && (
+                <button className="pd-tab-action pd-tab-action-secondary tooltip-host" onClick={() => setShowDocAnonymizer(true)} data-tip="Remove student names and PII from a batch of documents or a ZIP">Anonymize Documents</button>
+              )}
+              <button className="pd-tab-action tooltip-host" onClick={() => setShowDatasetVerify(true)} data-tip="Run all applicable checks on a dataset">Verify Dataset</button>
+            </div>
+          )}
         </div>
 
-        <div className="checkpoints-section" id="checkpoints-section">
-          {categories.map(category => (
-            <div key={category} className="checkpoint-category">
-              <h3 className="category-title">{category}</h3>
-              <div className="checkpoint-list">
-                {myCheckpoints
-                  .filter(c => c.category === category)
-                  .map(checkpoint => (
-                    <CheckpointItem
-                      key={checkpoint.id}
-                      checkpoint={checkpoint}
-                      role={role}
-                      saving={saving}
-                      expanded={expandedCheckpoint === checkpoint.id}
-                      expandedMode={expandedMode}
-                      decisions={(project.decisions || []).filter(d => d.checkpoint === checkpoint.id)}
-                      projectId={project.id}
-                      onToggleExpanded={(mode) => toggleExpanded(checkpoint.id, mode || 'info')}
-                      onLog={() => setLogCheckpointId(checkpoint.id)}
-                      onReopen={() => handleCheckpointToggle(checkpoint.id)}
-                      onVerifyDataset={() => setShowDatasetVerify(true)}
-                      onDraftCheckpoints={() => setShowSmartDefaults(true)}
-                    />
-                  ))}
+        {activeTab === 'tracker' ? (
+          <div className="checkpoints-section" id="checkpoints-section">
+            {categories.map(category => (
+              <div key={category} className="checkpoint-category">
+                <h3 className="category-title">{category}</h3>
+                <div className="checkpoint-list">
+                  {myCheckpoints
+                    .filter(c => c.category === category)
+                    .map(checkpoint => (
+                      <CheckpointItem
+                        key={checkpoint.id}
+                        checkpoint={checkpoint}
+                        role={role}
+                        saving={saving}
+                        expanded={expandedCheckpoint === checkpoint.id}
+                        expandedMode={expandedMode}
+                        decisions={(project.decisions || []).filter(d => d.checkpoint === checkpoint.id)}
+                        projectId={project.id}
+                        onToggleExpanded={(mode) => toggleExpanded(checkpoint.id, mode || 'info')}
+                        onLog={() => setLogCheckpointId(checkpoint.id)}
+                        onReopen={() => handleCheckpointToggle(checkpoint.id)}
+                        onVerifyDataset={() => setShowDatasetVerify(true)}
+                        onDraftCheckpoints={() => setShowSmartDefaults(true)}
+                      />
+                    ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <ActivityTimeline projectId={project.id} />
+        )}
 
         {logCheckpointId && (
           <LogDecisionModal
@@ -267,6 +294,10 @@ function ProjectDashboard({ project: initialProject, user, role, onBack, onLogou
               showToast('Checkpoint complete ✓');
             }}
           />
+        )}
+
+        {showDocAnonymizer && (
+          <DocumentAnonymizerModal onClose={() => setShowDocAnonymizer(false)} />
         )}
 
         {showSmartDefaults && (

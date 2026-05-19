@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from api.models import Invitation, Project
 from api.serializers.invitation import InvitationSerializer
 from api.services import notification_service
+from api.services import audit_service
 
 
 VALID_ROLES = {Invitation.ROLE_FACULTY_ADVISOR, Invitation.ROLE_STUDENT_COLLABORATOR}
@@ -103,6 +104,7 @@ def project_invitations_create(request: Request, project_id: int) -> Response:
     )
 
     notification_service.notify_invite_received(invitation)
+    audit_service.record_invite_sent(invitation)
 
     return Response(
         InvitationSerializer(invitation).data,
@@ -185,6 +187,7 @@ def invitation_accept(request: Request, invitation_id: int) -> Response:
     invitation.save(update_fields=['status', 'to_user', 'responded_at'])
 
     notification_service.notify_invite_responded(invitation)
+    audit_service.record_invite_responded(invitation)
 
     return Response(InvitationSerializer(invitation).data)
 
@@ -215,6 +218,7 @@ def invitation_decline(request: Request, invitation_id: int) -> Response:
     invitation.save(update_fields=['status', 'to_user', 'responded_at'])
 
     notification_service.notify_invite_responded(invitation)
+    audit_service.record_invite_responded(invitation)
 
     return Response(InvitationSerializer(invitation).data)
 
