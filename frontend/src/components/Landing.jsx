@@ -29,7 +29,7 @@ function Landing({ onGetStarted }) {
         </p>
         <div className="lp-hero-actions">
           <button className="lp-btn-hero" onClick={() => onGetStarted()}>Sign In to Get Started</button>
-          <button className="lp-btn-hero lp-btn-hero-secondary" onClick={() => onGetStarted({ prefill: true })}>Try Demo (TiE Judges)</button>
+          <button className="lp-btn-hero lp-btn-hero-secondary" onClick={() => onGetStarted({ prefill: true })}>Try Demo without credentials</button>
         </div>
         <p className="lp-hero-note">Requires a USF email address (@usf.edu) to register.</p>
         </div>
