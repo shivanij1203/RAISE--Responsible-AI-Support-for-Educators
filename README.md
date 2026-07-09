@@ -60,3 +60,8 @@ This is a prototype — built to explore what a practical ethics toolkit could l
 
 The stats shown are from published research (EDUCAUSE, Digital Education Council).
 
+## License
+
+All rights reserved. See the LICENSE file. This code is published for
+demonstration only and is not licensed for reuse.
+
