@@ -6,7 +6,6 @@ __pycache__/
 .Python
 venv/
 ENV/
-.env
 
 # Django
 *.log
@@ -38,3 +37,15 @@ generate_real_data.py
 faculty_ai_survey.csv
 faculty_ai_survey_real.csv
 backend/
+
+# Tooling and local assets (not part of the app)
+deck_assets/
+skills-lock.json
+
+# Demo data: track the generator scripts, ignore the generated CSVs
+sample_data/*.csv
+
+# Env files (keep the .env.example templates tracked)
+.env
+.env.*
+!.env.example

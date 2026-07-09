@@ -84,6 +84,7 @@ class ProjectSerializer(serializers.Serializer):
     name = serializers.CharField()
     description = serializers.CharField()
     aiUseCase = serializers.CharField(source='ai_use_case')
+    category = serializers.CharField(allow_null=True, allow_blank=True)
     status = serializers.CharField()
     createdAt = serializers.SerializerMethodField()
     owner = serializers.SerializerMethodField()

@@ -2,6 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
+PROJECT_CATEGORY_CHOICES = [
+    ('research', 'Research'),
+    ('teaching', 'Teaching'),
+    ('grading', 'Grading'),
+    ('admin', 'Admin'),
+]
+
+
 class Project(models.Model):
     """Tracks a research activity and its compliance status."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
@@ -18,6 +26,17 @@ class Project(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     ai_use_case = models.CharField(max_length=50)
+    category = models.CharField(
+        max_length=20,
+        choices=PROJECT_CATEGORY_CHOICES,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=(
+            'Activity category used to group activities on the dashboard. '
+            'Null means the user has not categorized this activity yet.'
+        ),
+    )
     status = models.CharField(max_length=20, default='active')
     ai_tools = models.ManyToManyField('api.AITool', blank=True, related_name='projects')
     share_as_example = models.BooleanField(

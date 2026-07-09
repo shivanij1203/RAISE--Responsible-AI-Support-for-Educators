@@ -73,7 +73,7 @@ export async function fetchProjects() {
   return res.data;
 }
 
-export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '', riskContext = {}, shareAsExample = false) {
+export async function createProject(name, description, aiUseCase, aiToolIds = [], facultyAdvisorEmail = '', studentCollaboratorEmail = '', riskContext = {}, shareAsExample = false, category = null) {
   const res = await api.post('/projects', {
     name,
     description,
@@ -83,6 +83,7 @@ export async function createProject(name, description, aiUseCase, aiToolIds = []
     student_collaborator_email: studentCollaboratorEmail,
     risk_context: riskContext,
     share_as_example: shareAsExample,
+    category,
   });
   return res.data;
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { parseQuickAddActivity, createProject } from '../../services/api';
 import { USE_CASE_LABELS_SHORT } from '../../constants/useCases';
+import { ACTIVITY_CATEGORIES } from '../../constants/activityCategories';
 
 const RISK_LABELS = {
   involves_student_data: 'Involves student data',
@@ -22,6 +23,7 @@ function QuickAddActivityModal({ onClose, onCreated, initialDescription = '' }) 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [shareAsExample, setShareAsExample] = useState(false);
+  const [category, setCategory] = useState('');
 
   async function handleParse() {
     if (!description.trim()) {
@@ -42,6 +44,10 @@ function QuickAddActivityModal({ onClose, onCreated, initialDescription = '' }) 
 
   async function handleConfirm() {
     if (!draft) return;
+    if (!category) {
+      setError('Please pick a category for this activity.');
+      return;
+    }
     setError('');
     setCreating(true);
     try {
@@ -54,6 +60,7 @@ function QuickAddActivityModal({ onClose, onCreated, initialDescription = '' }) 
         '',
         draft.risk_context || {},
         shareAsExample,
+        category,
       );
       onCreated(project);
     } catch (err) {
@@ -171,6 +178,28 @@ function QuickAddActivityModal({ onClose, onCreated, initialDescription = '' }) 
                 onChange={(e) => updateDraftField('description', e.target.value)}
                 rows={3}
               />
+            </div>
+
+            <div className="form-group">
+              <label>Category</label>
+              <div className="qa-category-list">
+                {ACTIVITY_CATEGORIES.map((cat) => (
+                  <label
+                    key={cat.key}
+                    className={`qa-category-chip qa-category-chip-${cat.tone} ${category === cat.key ? 'is-selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="activity-category"
+                      value={cat.key}
+                      checked={category === cat.key}
+                      onChange={() => setCategory(cat.key)}
+                    />
+                    <span className="qa-category-chip-label">{cat.label}</span>
+                    <span className="qa-category-chip-hint">{cat.description}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             <div className="qa-share-toggle">

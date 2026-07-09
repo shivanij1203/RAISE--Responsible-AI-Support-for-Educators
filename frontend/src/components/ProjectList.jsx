@@ -4,6 +4,7 @@ import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
 import QuickAddActivityModal from './modals/QuickAddActivityModal';
 import PendingInvitationsBanner from './PendingInvitationsBanner';
+import { ACTIVITY_CATEGORIES, getCategoryLabel, getCategoryTone } from '../constants/activityCategories';
 
 function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, onViewToolRegistry, onViewUseCases, templateSeed, onTemplateConsumed }) {
   const [projects, setProjects] = useState([]);
@@ -14,6 +15,8 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
   const [editFacultyEmail, setEditFacultyEmail] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [editingCategoryFor, setEditingCategoryFor] = useState(null);
+  const [activeCategoryTab, setActiveCategoryTab] = useState('all');
 
   useEffect(() => {
     loadProjects();
@@ -47,7 +50,7 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
     return (
       <div className="project-list">
         <div className="pl-topbar">
-          <div className="pl-topbar-inner">
+          <div className="app-container pl-topbar-inner">
             <div className="pl-topbar-brand">
               <img src="/usf-logo.svg" alt="USF" className="pl-topbar-logo" />
               <div className="pl-topbar-text">
@@ -58,11 +61,11 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
           </div>
         </div>
         <div className="pl-nav">
-          <div className="pl-nav-inner">
+          <div className="app-container pl-nav-inner">
             <button className="pl-nav-tab active">My Activities</button>
           </div>
         </div>
-        <div className="projects-grid" style={{ padding: '2rem 2.5rem', maxWidth: '1160px', margin: '0 auto' }}>
+        <div className="app-container projects-grid" style={{ paddingTop: '2rem' }}>
           {[1, 2, 3].map(i => (
             <div key={i} className="project-card skeleton-card">
               <div className="skeleton-line skeleton-title"></div>
@@ -79,7 +82,7 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
     <div className="project-list">
       {/* USF-style top bar */}
       <div className="pl-topbar">
-        <div className="pl-topbar-inner">
+        <div className="app-container pl-topbar-inner">
           <div className="pl-topbar-brand">
             <img src="/usf-logo.svg" alt="USF" className="pl-topbar-logo" />
             <div className="pl-topbar-text">
@@ -99,13 +102,43 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
 
       {/* Tab navigation */}
       <div className="pl-nav">
-        <div className="pl-nav-inner">
+        <div className="app-container pl-nav-inner">
           <button className="pl-nav-tab active">My Activities</button>
           <button className="pl-nav-tab" onClick={onViewToolRegistry}>Tool Insights</button>
           <button className="pl-nav-tab" onClick={onViewUseCases}>Use Cases</button>
           <button className="pl-nav-tab" onClick={onViewDashboard}>Compliance Overview</button>
         </div>
       </div>
+
+      {/* Category filter tab row */}
+      {projects.length > 0 && (() => {
+        const counts = projects.reduce((acc, p) => {
+          const k = p.category || '__none__';
+          acc[k] = (acc[k] || 0) + 1;
+          return acc;
+        }, {});
+        return (
+          <div className="pl-nav pl-nav-secondary">
+            <div className="app-container pl-nav-inner">
+              <button
+                className={`pl-nav-tab ${activeCategoryTab === 'all' ? 'active' : ''}`}
+                onClick={() => setActiveCategoryTab('all')}
+              >
+                All<span className="pl-nav-count">{projects.length}</span>
+              </button>
+              {ACTIVITY_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.key}
+                  className={`pl-nav-tab ${activeCategoryTab === cat.key ? 'active' : ''}`}
+                  onClick={() => setActiveCategoryTab(cat.key)}
+                >
+                  {cat.label}<span className="pl-nav-count">{counts[cat.key] || 0}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {loadError && (
         <div className="error-banner">
@@ -116,7 +149,7 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
 
       <PendingInvitationsBanner onAccepted={loadProjects} />
 
-      <div className="pl-intro">
+      <div className="app-container pl-intro">
         <h2 className="pl-intro-title">My Activities</h2>
         <p className="pl-intro-tagline">
           Use AI responsibly and confidently in your academic work, with RAISE.
@@ -155,9 +188,16 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
         </div>
       ) : (
         <>
-          <div className="projects-grid">
-            {projects.map((project) => {
+          {(() => {
+            const filteredProjects = activeCategoryTab === 'all'
+              ? projects
+              : projects.filter((p) => p.category === activeCategoryTab);
+
+            const renderCard = (project) => {
               const completion = getCompletionPercentage(project);
+              const catLabel = getCategoryLabel(project.category);
+              const catTone = getCategoryTone(project.category);
+              const isOwner = project.ownerEmail === user?.email;
               return (
                 <div
                   key={project.id}
@@ -170,6 +210,47 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
                       Created {new Date(project.createdAt).toLocaleDateString()}
                     </span>
                   </div>
+                  {catLabel && (
+                    <div className="project-category-row">
+                      <span className={`project-category-badge project-category-badge-${catTone}`}>
+                        {catLabel}
+                      </span>
+                      {isOwner && (
+                        <button
+                          className="project-category-change"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCategoryFor(editingCategoryFor === project.id ? null : project.id);
+                          }}
+                        >
+                          {editingCategoryFor === project.id ? 'Cancel' : 'Change'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {catLabel && editingCategoryFor === project.id && (
+                    <div className="project-set-category" onClick={(e) => e.stopPropagation()}>
+                      <label className="project-set-category-label">Change to:</label>
+                      <select
+                        value={project.category || ''}
+                        onChange={async (e) => {
+                          const newCat = e.target.value;
+                          if (!newCat || newCat === project.category) return;
+                          try {
+                            const updated = await updateProject(project.id, { category: newCat });
+                            setProjects(projects.map((p) => (p.id === updated.id ? updated : p)));
+                            setEditingCategoryFor(null);
+                          } catch (err) {
+                            console.error('Failed to change category', err);
+                          }
+                        }}
+                      >
+                        {ACTIVITY_CATEGORIES.map((c) => (
+                          <option key={c.key} value={c.key}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <p className="project-description">{project.description || 'No description'}</p>
 
                   <div className="project-progress">
@@ -196,30 +277,58 @@ function ProjectList({ user, role, onSelectProject, onLogout, onViewDashboard, o
                       Student: {project.studentCollaborator.name}
                     </div>
                   )}
-                  {!project.facultyAdvisor && role === 'student' && project.ownerEmail === user?.email && (
+                  {!project.category && isOwner && (
+                    <div className="project-set-category" onClick={(e) => e.stopPropagation()}>
+                      <label className="project-set-category-label">Set category:</label>
+                      <select
+                        value=""
+                        onChange={async (e) => {
+                          const newCat = e.target.value;
+                          if (!newCat) return;
+                          try {
+                            const updated = await updateProject(project.id, { category: newCat });
+                            setProjects(projects.map((p) => (p.id === updated.id ? updated : p)));
+                          } catch (err) {
+                            console.error('Failed to set category', err);
+                          }
+                        }}
+                      >
+                        <option value="" disabled>Choose…</option>
+                        {ACTIVITY_CATEGORIES.map((c) => (
+                          <option key={c.key} value={c.key}>{c.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {!project.facultyAdvisor && role === 'student' && isOwner && (
                     <button className="btn-link" onClick={(e) => { e.stopPropagation(); setEditingProject(project); setEditFacultyEmail(''); setEditError(''); }}>
                       + Invite Faculty Advisor
                     </button>
                   )}
-                  {!project.studentCollaborator && role === 'pi' && project.ownerEmail === user?.email && (
+                  {!project.studentCollaborator && role === 'pi' && isOwner && (
                     <button className="btn-link" onClick={(e) => { e.stopPropagation(); setEditingProject(project); setEditFacultyEmail(''); setEditError(''); }}>
                       + Invite Student
                     </button>
                   )}
                 </div>
               );
-            })}
+            };
 
-            <div
-              className="project-card add-card add-card-quick"
-              onClick={() => setShowQuickAdd(true)}
-              title="Add a new activity by describing it in one sentence"
-            >
-              <div className="add-icon">+</div>
-              <span>Add a New Activity</span>
-              <span className="add-card-hint">Describe what you'll do with AI</span>
-            </div>
-          </div>
+            return (
+              <div className="app-container projects-grid">
+                <div
+                  className="project-card add-card add-card-quick"
+                  onClick={() => setShowQuickAdd(true)}
+                  title="Add a new activity by describing it in one sentence"
+                >
+                  <div className="add-icon">+</div>
+                  <span>Add a New Activity</span>
+                  <span className="add-card-hint">Describe what you'll do with AI</span>
+                </div>
+                {filteredProjects.map(renderCard)}
+              </div>
+            );
+          })()}
         </>
       )}
 

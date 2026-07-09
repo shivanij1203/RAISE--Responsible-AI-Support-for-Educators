@@ -8,6 +8,9 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 
 from api.models import Project, Checkpoint, Decision, AITool
+from api.models.project import PROJECT_CATEGORY_CHOICES
+
+VALID_PROJECT_CATEGORIES = {value for value, _label in PROJECT_CATEGORY_CHOICES}
 from api.serializers import (
     ProjectSerializer,
     CheckpointToggleResponseSerializer,
@@ -56,6 +59,14 @@ def project_list_create(request: Request) -> Response:
     if not name:
         return Response({"error": "Project name is required"}, status=status.HTTP_400_BAD_REQUEST)
 
+    raw_category = request.data.get('category')
+    category = raw_category.strip() if isinstance(raw_category, str) and raw_category.strip() else None
+    if category is not None and category not in VALID_PROJECT_CATEGORIES:
+        return Response(
+            {"error": f"Invalid category. Must be one of: {', '.join(sorted(VALID_PROJECT_CATEGORIES))}"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Look up faculty advisor by email if provided
     faculty_advisor = None
     advisor_email = request.data.get('faculty_advisor_email', '').strip().lower()
@@ -79,6 +90,7 @@ def project_list_create(request: Request) -> Response:
         name=name,
         description=request.data.get('description', ''),
         ai_use_case=ai_use_case,
+        category=category,
         faculty_advisor=faculty_advisor,
         student_collaborator=student_collab,
         share_as_example=bool(request.data.get('share_as_example', False)),
@@ -129,17 +141,30 @@ def project_detail(request: Request, project_id: int) -> Response:
         original = {
             'name': project.name,
             'description': project.description,
+            'category': project.category,
             'share_as_example': project.share_as_example,
             'faculty_advisor_id': project.faculty_advisor_id,
             'student_collaborator_id': project.student_collaborator_id,
         }
 
-        # Only owner can edit name/description and share-as-example flag
+        # Only owner can edit name/description, category, and share-as-example flag
         if project.user == request.user:
             if 'name' in request.data:
                 project.name = request.data['name'].strip()
             if 'description' in request.data:
                 project.description = request.data['description']
+            if 'category' in request.data:
+                raw_category = request.data.get('category')
+                if isinstance(raw_category, str) and raw_category.strip():
+                    new_category = raw_category.strip()
+                    if new_category not in VALID_PROJECT_CATEGORIES:
+                        return Response(
+                            {"error": f"Invalid category. Must be one of: {', '.join(sorted(VALID_PROJECT_CATEGORIES))}"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                    project.category = new_category
+                else:
+                    project.category = None
             if 'share_as_example' in request.data:
                 project.share_as_example = bool(request.data['share_as_example'])
 
@@ -190,6 +215,8 @@ def project_detail(request: Request, project_id: int) -> Response:
             changed_fields.append('name')
         if project.description != original['description']:
             changed_fields.append('description')
+        if project.category != original['category']:
+            changed_fields.append('category')
         if project.faculty_advisor_id != original['faculty_advisor_id']:
             changed_fields.append('faculty advisor')
         if project.student_collaborator_id != original['student_collaborator_id']:

@@ -144,8 +144,10 @@ function App() {
   return (
     <>
       <div className="prototype-banner" role="status" aria-label="Prototype notice">
-        <span className="prototype-banner-dot" aria-hidden="true"></span>
-        Prototype · Demo data only · Not connected to live student records
+        <div className="app-container prototype-banner-inner">
+          <span className="prototype-banner-dot" aria-hidden="true"></span>
+          Prototype · Demo data only · Not connected to live student records
+        </div>
       </div>
       <div className="prototype-banner-spacer" aria-hidden="true"></div>
       {view}

@@ -4895,15 +4895,26 @@ footer {
 }
 
 /* ===== USF-Style Project List Top Bar ===== */
+/* Centered content container: constrains inner content to a readable width
+   on wide screens while full-bleed backgrounds still span the viewport.
+   Uses longhand horizontal padding so it can compose with classes that set
+   their own vertical padding. */
+.app-container {
+  max-width: 1240px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
 .pl-topbar {
   background: #006747;
   padding: 0;
 }
 
 .pl-topbar-inner {
-  max-width: none;
-  margin: 0;
-  padding: 0.875rem 2rem;
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -5237,9 +5248,6 @@ footer {
 }
 
 .pl-nav-inner {
-  max-width: none;
-  margin: 0;
-  padding: 0 2rem;
   display: flex;
   gap: 0;
 }
@@ -5266,6 +5274,40 @@ footer {
   border-bottom-color: #006747;
 }
 
+/* Secondary tab row: same underline language as main nav, slightly
+   smaller and lighter so it reads as a child layer. */
+.pl-nav-secondary {
+  background: #fcfdfe;
+  border-bottom: 1px solid #e2e8f0;
+  position: static;
+}
+
+.pl-nav-secondary .pl-nav-tab {
+  padding: 0.55rem 1.25rem;
+  font-size: 0.85rem;
+  border-bottom-width: 2px;
+}
+
+.pl-nav-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4rem;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.pl-nav-tab.active .pl-nav-count {
+  background: #e6f4ee;
+  color: #006747;
+}
+
 /* Override old header styles for project list */
 .project-list {
   background: #f8fafc;
@@ -5279,11 +5321,11 @@ footer {
 .project-list .projects-grid,
 .project-list .empty-state,
 .project-list .error-banner {
-  max-width: none;
-  margin-left: 0;
-  margin-right: 0;
-  padding-left: 2rem;
-  padding-right: 2rem;
+  max-width: 1240px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .project-list .projects-grid {
@@ -6989,13 +7031,16 @@ footer {
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.01em;
-  padding: 0.4rem 1rem;
+  padding: 0.4rem 0;
   text-align: center;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.prototype-banner-inner {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
 }
 
 .prototype-banner-dot {
@@ -7252,7 +7297,7 @@ footer {
 @media (max-width: 720px) {
   .prototype-banner {
     font-size: 0.6875rem;
-    padding: 0.35rem 0.75rem;
+    padding: 0.35rem 0;
   }
   .prototype-banner-spacer {
     height: 32px;
@@ -7283,7 +7328,7 @@ footer {
 }
 
 .pl-intro {
-  padding: 2rem 2rem 0;
+  padding-top: 2rem;
   text-align: left;
 }
 
@@ -7309,7 +7354,7 @@ footer {
   color: #475569;
   line-height: 1.6;
   margin: 0 0 0.875rem;
-  padding-right: 2rem;
+  max-width: 70ch;
   text-align: left;
 }
 
@@ -8153,4 +8198,199 @@ footer {
   background: transparent;
   border: 1px solid #e2e8f0;
   color: #94a3b8;
+}
+
+/* Activity category sections on the dashboard */
+.pl-category-sections {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 1rem 2.5rem 3rem;
+}
+
+.pl-category-section {
+  margin-bottom: 2.25rem;
+}
+
+.pl-category-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  background: transparent;
+  border: none;
+}
+
+.pl-category-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.pl-category-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: -0.005em;
+}
+
+.pl-category-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Accent color per category (used by both the header dot and, in a later
+   pass, the card badge text). One color per category, no fills. */
+.pl-category-dot-blue { background: #2563eb; }
+.pl-category-dot-green { background: #16a34a; }
+.pl-category-dot-orange { background: #ea580c; }
+.pl-category-dot-purple { background: #9333ea; }
+.pl-category-dot-gray { background: #94a3b8; }
+
+.pl-category-empty {
+  margin: 0 0 0 1rem;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.pl-category-grid {
+  padding: 0;
+}
+
+.pl-add-row {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.pl-add-row .add-card {
+  min-width: 260px;
+}
+
+/* Category badge on project cards */
+.project-category-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.project-category-change {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.project-category-change:hover {
+  color: #1e293b;
+}
+
+.project-category-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  border: 1px solid transparent;
+}
+
+.project-category-badge-blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.project-category-badge-green { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.project-category-badge-orange { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.project-category-badge-purple { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+
+/* Inline "Set category" picker on uncategorized cards */
+.project-set-category {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #fffbeb;
+  border: 1px dashed #fcd34d;
+  border-radius: 6px;
+}
+
+.project-set-category-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.project-set-category select {
+  flex: 1;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  background: white;
+}
+
+/* Category radio chips in the Add Activity modal */
+.qa-category-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.qa-category-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.625rem 0.75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: white;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.qa-category-chip:hover {
+  border-color: #94a3b8;
+}
+
+.qa-category-chip input[type="radio"] {
+  display: none;
+}
+
+.qa-category-chip.is-selected {
+  border-width: 2px;
+  padding: calc(0.625rem - 0.5px) calc(0.75rem - 0.5px);
+}
+
+.qa-category-chip-blue.is-selected { border-color: #2563eb; background: #eff6ff; }
+.qa-category-chip-green.is-selected { border-color: #059669; background: #ecfdf5; }
+.qa-category-chip-orange.is-selected { border-color: #ea580c; background: #fff7ed; }
+.qa-category-chip-purple.is-selected { border-color: #7c3aed; background: #f5f3ff; }
+
+.qa-category-chip-label {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.qa-category-chip-hint {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.3;
 }
