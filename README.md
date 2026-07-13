@@ -1,67 +1,54 @@
 # RAISE Ethics Toolkit
 
-A prototype tool to help faculty navigate AI ethics in research and teaching.
-
-## What this is
-
-I built this after reading about the RAISE project at USF. The problem stuck with me — faculty are using AI tools like ChatGPT in their work, but most don't have clear guidance on when it's okay, when they need IRB amendments, or how to stay FERPA compliant.
-
-The stats are kind of wild:
-- 61% of faculty use AI in teaching (EDUCAUSE 2024)
-- 68% have no formal AI ethics training
-- 61% of institutions don't have AI policies yet
-
-So instead of another PDF guide that nobody reads, I wanted to build something interactive that actually tells you what to do based on your specific situation.
+A system of record for AI use in higher education.
 
 ## What it does
 
-**Role-Based Access**
-When you start, you pick your role (student, faculty, administrator). The interface adapts based on what's relevant to you.
+Faculty, researchers, grad students, and administrators register each AI use as
+an activity, described in one sentence. RAISE picks the use case, flags risks,
+and generates compliance checkpoints across FERPA, HIPAA, IRB Common Rule, NIST
+AI RMF, ADA, Section 508, and Civil Rights Title VI/IX. It also scores five
+ethics dimensions: fairness, privacy, accountability, transparency, and
+institutional policy. The toolkit covers 8 use cases, 25 checkpoints, and 12
+regulatory and ethics dimensions.
 
-**Project Dashboard**
-Track your AI-related projects and their compliance status. See at a glance which ones need attention.
+## Architecture
 
-**Document Generator**
-Generates actual templates you can use — IRB amendments, FERPA checklists, disclosure statements. Fill in your details and download.
+RAISE is organized as three rings:
 
-**Knowledge Assessment**
-Quick quiz to check your understanding of AI ethics. Scenario-based questions, not just self-report stuff.
+- Inventory (live): register and track every AI activity.
+- Verify (live): run automated checks on uploaded data.
+- Govern (roadmap): institution-wide oversight and reporting.
 
-## Tech stack
+## Features
 
-- Backend: Django + Django REST Framework
-- Frontend: React + Vite
-- Database: SQLite
+- Quick Add: describe an activity in one sentence and receive a use case, risk
+  flags, and checkpoints.
+- Verify Dataset: upload one CSV and run Personal Info Scan, FERPA Compliance,
+  Data Classification, and Bias Audit.
+- Personal Info Cleanup: redact personal information from an uploaded file.
+- Anonymous Grading Mode: hide student identifiers during grading.
+- Grading Prompt Generator: build a grading prompt from a rubric.
+- Draft Checkpoints: pre-fill checkpoint answers for review.
+- Tool Insights: compliance guidance for common software tools.
+- Use Cases library: reference for the supported activity types.
+- Discussion threads: per-checkpoint comments between collaborators.
 
-## Running locally
+## Status
 
-Backend:
-```bash
-cd backend_django
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver 8000
-```
+Prototype. Demo data only. Not connected to live student records. Live at
+raise-toolkit.vercel.app, gated to USF email addresses.
 
-Frontend:
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Demo data
 
-Then open http://localhost:5173
-
-## Notes
-
-This is a prototype — built to explore what a practical ethics toolkit could look like. The decision tree logic and templates are based on HIPAA Safe Harbor, FERPA requirements, and COPE guidelines.
-
-The stats shown are from published research (EDUCAUSE, Digital Education Council).
+The demo data is synthetic. The scripts in sample_data/ generate it. They use
+reserved identifier ranges: 900-prefix numbers, the .invalid TLD reserved by RFC
+2606, and 555-01xx phone numbers. No real personal information is present. The
+admissions dataset seeds disparate impact on purpose, so the bias audit has
+something to detect. The reported 0.356 disparate impact ratio shows that
+detection works. It is not a finding about any real admissions process.
 
 ## License
 
-All rights reserved. See the LICENSE file. This code is published for
-demonstration only and is not licensed for reuse.
-
+All rights reserved. See LICENSE. Published for demonstration only, not licensed
+for reuse.
