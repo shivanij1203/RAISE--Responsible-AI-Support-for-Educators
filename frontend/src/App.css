@@ -7988,7 +7988,11 @@ footer {
 
 /* ===== Pending Invitations Banner (on ProjectList) ===== */
 .invitations-banner {
-  margin: 1rem 1.5rem 0;
+  /* Align the banner with the .app-container content width (1240px max,
+     minus 24px side padding on each side) so its edges line up with the
+     nav, intro, and card grid instead of stranding wider. */
+  max-width: 1192px;
+  margin: 1rem auto 0;
   padding: 1rem 1.25rem;
   background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
   border: 1px solid #86efac;
